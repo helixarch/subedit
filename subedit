@@ -1,67 +1,113 @@
 #!/usr/bin/bash
 
-echo "Processing "$2"..."
+# Help
+get_help ()
+{
+	echo ""
+	echo "$(tput setaf 6)NAME $(tput sgr0)"
+	echo "    subedit"
+	echo ""
+	echo "$(tput setaf 6)DESCRIPTION $(tput sgr0)"
+	echo "    Command line subtitle editor."
+	echo ""
+	echo "$(tput setaf 6)OPTIONS $(tput sgr0)"
+	echo "    -i        Input filename. Takes value of a fullpath or a filename in your working directory."
+	echo "    -s        Shift time. Takes value of type 'hh:mm:ss:fff'."
+	echo "    -h        Display this info and exit."
+	exit
+}
 
-unix2dos -q "$2"
 
-# Calculate the time to move the subs
-regexmove="^move=([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$"
+# If no option is given then exit
+if ( ! getopts ":i:s:h" opt); then
+	echo "Try 'subedit.sh -h' for more information."; exit 1;
+fi
 
-[[ $1 =~ $regexmove ]]
-sign="${BASH_REMATCH[1]}"
-h="${BASH_REMATCH[2]}"
-m="${BASH_REMATCH[3]}"
-s="${BASH_REMATCH[4]}"
-x="${BASH_REMATCH[5]}"
-
-p=$sign$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$x))))
-
-
-# Read text file to array
-old_IFS=$IFS		# save the field separator
-IFS=$'\n'			# new field separator, the end of line
-
-for line in $(cat "$2")
-do
-	arraysrt+=($line)
+# Processing options
+while getopts ":i:s:h" option; do
+	case "$option" in
+		i) inputfilename=$OPTARG ;;
+		s) shifttime=$OPTARG ;;
+		h) get_help ;;
+		?) echo -e "Unknown option -$OPTARG\nTry 'subedit.sh -h' for more information."; exit 1 ;;
+	esac
 done
 
-IFS=$old_IFS		# restore default field separator
 
+shift_time ()
+{
+	# Calculate the time to move the subs
+	regexshift="^([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$"
 
-# Process the array
-regex="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
-
-for ((i=0; i<=${#arraysrt[@]}; i++))
-do
-	line=${arraysrt[$i]}
-
-	[[ $line =~ $regex ]]
-	h1="${BASH_REMATCH[1]}"
-	m1="${BASH_REMATCH[2]}"
-	s1="${BASH_REMATCH[3]}"
-	x1="${BASH_REMATCH[4]}"
-
-	h2="${BASH_REMATCH[5]}"
-	m2="${BASH_REMATCH[6]}"
-	s2="${BASH_REMATCH[7]}"
-	x2="${BASH_REMATCH[8]}"
-
-	if [[ $h1 != "" ]]
-	then
-		p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$x1))))
-		p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$x2))))
-
-		p1_new=$(($p1 + $p))
-		p2_new=$(($p2 + $p))
-
-		j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
-		j2=$(printf "%02d:%02d:%02d,%03d" $(($p2_new / 3600000)) $(($(($p2_new % 3600000)) / 60000)) $(($(($p2_new % 60000)) / 1000)) $(($p2_new % 1000)))
-
-		line_new="$(echo "$j1 --> $j2")"
-
-		arraysrt[$i]=$line_new
+	if [[ $shifttime =~ $regexshift ]]; then
+		sign="${BASH_REMATCH[1]}"
+		h="${BASH_REMATCH[2]}"
+		m="${BASH_REMATCH[3]}"
+		s="${BASH_REMATCH[4]}"
+		x="${BASH_REMATCH[5]}"
+	else
+		echo "Time format must me like 'hh:mm:ss,fff'"; exit 1
 	fi
-done
 
-printf "%s\n" "${arraysrt[@]}" > "$2"	## Writes to the txt file the contents of array.
+	echo "Shifting time of $inputfilename by $shifttime..."
+
+	p=$sign$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$x))))
+
+
+	unix2dos -q "$inputfilename"
+
+	# Read text file to array
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	for line in $(cat "$inputfilename"); do
+		arraysrt+=($line)
+	done
+
+	IFS=$old_IFS		# restore default field separator
+
+
+	# Process the array
+	regex="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
+
+	for ((i=0; i<=${#arraysrt[@]}; i++)); do
+		line=${arraysrt[$i]}
+
+		[[ $line =~ $regex ]]
+		h1="${BASH_REMATCH[1]}"
+		m1="${BASH_REMATCH[2]}"
+		s1="${BASH_REMATCH[3]}"
+		x1="${BASH_REMATCH[4]}"
+
+		h2="${BASH_REMATCH[5]}"
+		m2="${BASH_REMATCH[6]}"
+		s2="${BASH_REMATCH[7]}"
+		x2="${BASH_REMATCH[8]}"
+
+		if [[ $h1 != "" ]]; then
+			p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$x1))))
+			p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$x2))))
+
+			p1_new=$(($p1 + $p))
+			p2_new=$(($p2 + $p))
+
+			[[ $p1_new -lt 0 ]] && echo "Negative time not allowed. Check the shifting value. Exiting..." && exit 1
+
+			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
+			j2=$(printf "%02d:%02d:%02d,%03d" $(($p2_new / 3600000)) $(($(($p2_new % 3600000)) / 60000)) $(($(($p2_new % 60000)) / 1000)) $(($p2_new % 1000)))
+
+			line_new="$(echo "$j1 --> $j2")"
+
+			arraysrt[$i]=$line_new
+		fi
+	done
+
+	# Write to the txt file the contents of array.
+	printf "%s\n" "${arraysrt[@]}" > "$inputfilename"
+}
+
+
+if [[ $shifttime ]] && [[ $inputfilename ]]; then
+	shift_time
+	exit 0
+fi
