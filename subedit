@@ -50,10 +50,14 @@ shift_time ()
 		s="${BASH_REMATCH[4]}"
 		x="${BASH_REMATCH[5]}"
 	else
-		echo "Time format must me like 'hh:mm:ss,fff'"; exit 1
+		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff'"; exit 1
 	fi
 
-	echo "Shifting time of $inputfilename by $shifttime..."
+	if (( 10#$m >= 60 )) || (( 10#$s >= 60 )); then
+		echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+	fi
+
+	echo "Shifting time of \"$inputfilename\" by $shifttime..."
 
 	p=$sign$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$x))))
 
@@ -114,9 +118,9 @@ shift_time ()
 change_fps ()
 {
 	if [[ $1 == "-pal_2_ntsc" ]]; then
-		echo "Changing fps of $inputfilename from PAL to NTSC..."
+		echo "Changing fps of \"$inputfilename\" from PAL to NTSC..."
 	elif [[ $1 == "-ntsc_2_pal" ]]; then
-		echo "Changing fps of $inputfilename from NTSC to PAL..."
+		echo "Changing fps of \"$inputfilename\" from NTSC to PAL..."
 	fi
 
 
