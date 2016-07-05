@@ -10,8 +10,8 @@ get_help ()
 	echo "$(tput setaf 6)DESCRIPTION $(tput sgr0)"
 	echo "    Command line subtitle editor."
 	echo ""
-	echo "$(tput setaf 6)OPTIONS $(tput sgr0)"
-	echo "    -i        Input filename. Takes value of a fullpath or a filename in your working directory."
+	echo "$(tput setaf 6)PARAMETERS $(tput sgr0)"
+	echo "    -i        Input file. Takes value of a fullpath or a filename in your working directory."
 	echo "    -s        Shift time. Takes value of type 'hh:mm:ss:fff'."
 	echo "    -p        Switch. Changes the fps from NTSC to PAL."
 	echo "    -n        Switch. Changes the fps from PAL to NTSC."
@@ -20,24 +20,25 @@ get_help ()
 }
 
 
-# If no option is given then exit
+# If no parameter is given then exit
 if ( ! getopts ":i:s:pnh" opt); then
 	echo "Try 'subedit.sh -h' for more information."; exit 1;
 fi
 
-# Processing options
-while getopts ":i:s:pnh" option; do
-	case "$option" in
+# Processing parameters
+while getopts ":i:s:pnh" parameter; do
+	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
 		p) ntsc2pal="True" ;;
 		n) pal2ntsc="True" ;;
 		h) get_help ;;
-		?) echo -e "Unknown option -$OPTARG\nTry 'subedit.sh -h' for more information."; exit 1 ;;
+		?) echo -e "Unknown parameter -$OPTARG\nTry 'subedit.sh -h' for more information."; exit 1 ;;
 	esac
 done
 
 
+### Main functions
 shift_time ()
 {
 	# Calculate the time to move the subs
@@ -48,7 +49,7 @@ shift_time ()
 		h="${BASH_REMATCH[2]}"
 		m="${BASH_REMATCH[3]}"
 		s="${BASH_REMATCH[4]}"
-		x="${BASH_REMATCH[5]}"
+		f="${BASH_REMATCH[5]}"
 	else
 		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff'"; exit 1
 	fi
@@ -59,7 +60,7 @@ shift_time ()
 
 	echo "Shifting time of \"$inputfilename\" by $shifttime..."
 
-	p=$sign$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$x))))
+	p=$sign$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
 
 
 	unix2dos -q "$inputfilename"
@@ -76,35 +77,36 @@ shift_time ()
 
 
 	# Process the array
-	regex="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
+	regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
 
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		line=${arraysrt[$i]}
 
-		[[ $line =~ $regex ]]
-		h1="${BASH_REMATCH[1]}"
-		m1="${BASH_REMATCH[2]}"
-		s1="${BASH_REMATCH[3]}"
-		x1="${BASH_REMATCH[4]}"
+		if [[ $line =~ $regextime ]]; then
+			h1="${BASH_REMATCH[1]}"
+			m1="${BASH_REMATCH[2]}"
+			s1="${BASH_REMATCH[3]}"
+			f1="${BASH_REMATCH[4]}"
 
-		h2="${BASH_REMATCH[5]}"
-		m2="${BASH_REMATCH[6]}"
-		s2="${BASH_REMATCH[7]}"
-		x2="${BASH_REMATCH[8]}"
+			h2="${BASH_REMATCH[5]}"
+			m2="${BASH_REMATCH[6]}"
+			s2="${BASH_REMATCH[7]}"
+			f2="${BASH_REMATCH[8]}"
 
-		if [[ $h1 != "" ]]; then
-			p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$x1))))
-			p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$x2))))
+			p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+			p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$f2))))
 
 			p1_new=$(($p1 + $p))
 			p2_new=$(($p2 + $p))
 
-			[[ $p1_new -lt 0 ]] && echo "Negative time not allowed. Check the shifting value. Exiting..." && exit 1
+			if (( $p1_new < 0 )); then
+				echo "Error: Negative time not allowed. Check the shifting value."; exit 1
+			fi
 
 			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
 			j2=$(printf "%02d:%02d:%02d,%03d" $(($p2_new / 3600000)) $(($(($p2_new % 3600000)) / 60000)) $(($(($p2_new % 60000)) / 1000)) $(($p2_new % 1000)))
 
-			line_new="$(echo "$j1 --> $j2")"
+			line_new="$j1 --> $j2"
 
 			arraysrt[$i]=$line_new
 		fi
@@ -117,9 +119,9 @@ shift_time ()
 
 change_fps ()
 {
-	if [[ $1 == "-pal_2_ntsc" ]]; then
+	if [[ $pal2ntsc ]]; then
 		echo "Changing fps of \"$inputfilename\" from PAL to NTSC..."
-	elif [[ $1 == "-ntsc_2_pal" ]]; then
+	elif [[ $ntsc2pal ]]; then
 		echo "Changing fps of \"$inputfilename\" from NTSC to PAL..."
 	fi
 
@@ -138,30 +140,29 @@ change_fps ()
 
 
 	# Process the array
-	regex="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
+	regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
 
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		line=${arraysrt[$i]}
 
-		[[ $line =~ $regex ]]
-		h1="${BASH_REMATCH[1]}"
-		m1="${BASH_REMATCH[2]}"
-		s1="${BASH_REMATCH[3]}"
-		x1="${BASH_REMATCH[4]}"
+		if [[ $line =~ $regextime ]]; then
+			h1="${BASH_REMATCH[1]}"
+			m1="${BASH_REMATCH[2]}"
+			s1="${BASH_REMATCH[3]}"
+			f1="${BASH_REMATCH[4]}"
 
-		h2="${BASH_REMATCH[5]}"
-		m2="${BASH_REMATCH[6]}"
-		s2="${BASH_REMATCH[7]}"
-		x2="${BASH_REMATCH[8]}"
+			h2="${BASH_REMATCH[5]}"
+			m2="${BASH_REMATCH[6]}"
+			s2="${BASH_REMATCH[7]}"
+			f2="${BASH_REMATCH[8]}"
 
-		if [[ $h1 != "" ]]; then
-			p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$x1))))
-			p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$x2))))
+			p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+			p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$f2))))
 
-			if [[ $1 == "-pal_2_ntsc" ]]; then
+			if [[ $pal2ntsc ]]; then
 				p1_new=$(($p1 * 1001 / 960))
 				p2_new=$(($p2 * 1001 / 960))
-			elif [[ $1 == "-ntsc_2_pal" ]]; then
+			elif [[ $ntsc2pal ]]; then
 				p1_new=$(($p1 * 960 / 1001))
 				p2_new=$(($p2 * 960 / 1001))
 			fi
@@ -169,7 +170,7 @@ change_fps ()
 			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
 			j2=$(printf "%02d:%02d:%02d,%03d" $(($p2_new / 3600000)) $(($(($p2_new % 3600000)) / 60000)) $(($(($p2_new % 60000)) / 1000)) $(($p2_new % 1000)))
 
-			line_new="$(echo "$j1 --> $j2")"
+			line_new="$j1 --> $j2"
 
 			arraysrt[$i]=$line_new
 		fi
@@ -180,17 +181,13 @@ change_fps ()
 }
 
 
-if [[ $shifttime ]] && [[ $inputfilename ]]; then
-	shift_time
-	exit 0
-fi
-
-if [[ $pal2ntsc ]] && [[ $inputfilename ]]; then
-	change_fps -pal_2_ntsc
-	exit 0
-fi
-
-if [[ $ntsc2pal ]] && [[ $inputfilename ]]; then
-	change_fps -ntsc_2_pal
+if [[ $inputfilename ]]; then
+	if [[ $shifttime ]]; then
+		shift_time
+	elif [[ $pal2ntsc ]]; then
+		change_fps
+	elif [[ $ntsc2pal ]]; then
+		change_fps
+	fi
 	exit 0
 fi
