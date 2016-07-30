@@ -33,7 +33,7 @@ while getopts ":i:s:pnh" parameter; do
 		p) ntsc2pal="True" ;;
 		n) pal2ntsc="True" ;;
 		h) get_help ;;
-		?) echo -e "Unknown parameter -$OPTARG\nTry 'subedit.sh -h' for more information."; exit 1 ;;
+		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit.sh -h' for more information."; exit 1 ;;
 	esac
 done
 
@@ -120,9 +120,9 @@ shift_time ()
 change_fps ()
 {
 	if [[ $pal2ntsc ]]; then
-		echo "Changing fps of \"$inputfilename\" from PAL to NTSC..."
+		echo "Changing fps of \"$inputfilename\" from PAL (25) to NTSC (23.976 or 29.970)..."
 	elif [[ $ntsc2pal ]]; then
-		echo "Changing fps of \"$inputfilename\" from NTSC to PAL..."
+		echo "Changing fps of \"$inputfilename\" from NTSC (23.976 or 29.970) to PAL (25)..."
 	fi
 
 
