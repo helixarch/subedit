@@ -22,12 +22,12 @@ get_help ()
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:y:h" opt); then
-	echo "Try 'subedit.sh -h' for more information."; exit 1;
+if ( ! getopts ":i:s:pna:y:e:E:h" opt); then
+	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:y:h" parameter; do
+while getopts ":i:s:pna:y:e:E:h" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
@@ -37,8 +37,14 @@ while getopts ":i:s:pna:y:h" parameter; do
 			eval "adjustlast=\$$((OPTIND))"
 			((OPTIND++)) ;;
 		y) synchronizefile=$OPTARG ;;
+		e)	eval "replace1=\$$((OPTIND-1))"
+			eval "replace2=\$$((OPTIND))"
+			((OPTIND++)) ;;
+		E)	eval "replace3=\$$((OPTIND-1))"
+			eval "replace4=\$$((OPTIND))"
+			((OPTIND++)) ;;
 		h) get_help ;;
-		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit.sh -h' for more information."; exit 1 ;;
+		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
 	esac
 done
 
@@ -475,6 +481,34 @@ synchronize_with_file ()
 }
 
 
+replace_text ()
+{
+	if [[ $replace3 ]]; then
+		replace1=$replace3
+		replace2=$replace4
+	fi
+
+	# Define forbitten and allowed regex
+	regexforbittensynbols="^[0-9<>\/:{}\$=#-,]+$"
+	regexallowedtimes="^[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]$"
+	regexallowedframes="^\{[0-9]+\}\{[0-9]+\}$"
+	regexallowedtime="^[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]$"
+	regexallowedframe="^\{[0-9]+\}$"
+
+	if ! [[  $replace1 =~  $regexallowedtimes ]] && ! [[  $replace1 =~  $regexallowedframes ]] && ! [[  $replace1 =~  $regexallowedtime ]] && ! [[  $replace1 =~  $regexallowedframe ]] && [[ $replace1 =~ $regexforbittensynbols ]]; then
+		echo "Error: You cannot replace this"; exit 1
+	fi
+
+	echo "Replacing \"$replace1\" with \"$replace2\" in file \"$inputfilename\""
+
+	if [[ $replace3 ]]; then
+		sed -i s"/$replace1/$replace2/g" "$inputfilename"
+	else
+		sed -i s"/$replace1/$replace2/ig" "$inputfilename"
+	fi
+}
+
+
 if [[ $inputfilename ]]; then
 	if [[ $shifttime ]]; then
 		shift_time
@@ -486,6 +520,10 @@ if [[ $inputfilename ]]; then
 		adjust_time
 	elif [[ $synchronizefile ]]; then
 		synchronize_with_file
+	elif [[ $replace1 ]]; then
+		replace_text
+	elif [[ $replace3 ]]; then
+		replace_text
 	fi
 	exit 0
 fi
