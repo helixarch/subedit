@@ -39,12 +39,12 @@ get_help ()
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:y:e:E:h" opt); then
+if ( ! getopts ":i:s:pna:y:e:E:t:h" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:y:e:E:h" parameter; do
+while getopts ":i:s:pna:y:e:E:t:h" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
@@ -60,6 +60,7 @@ while getopts ":i:s:pna:y:e:E:h" parameter; do
 		E)	eval "replace3=\$$((OPTIND-1))"
 			eval "replace4=\$$((OPTIND))"
 			((OPTIND++)) ;;
+		t) sub2srt=$OPTARG ;;
 		h) get_help ;;
 		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
 	esac
@@ -526,6 +527,85 @@ replace_text ()
 }
 
 
+sub2_srt ()
+{
+	if [[ $sub2srt == "pal" ]]; then ratio=1; fps=25025
+	elif [[ $sub2srt == "film" ]]; then ratio=1; fps=24000
+	elif [[ $sub2srt == "ntsc" ]]; then ratio=1; fps=30000
+	elif [[ $sub2srt =~ ^[0-9]+$ ]]; then ratio=1; fps=$(($sub2srt * 1001))
+	elif [[ $sub2srt =~ ^[0-9]+\.[0-9]*$ ]]; then custom="True"; fpsint=${sub2srt%.*}; fpsdecimal=${sub2srt##*.}; decimallength=${#fpsdecimal}; if (( $decimallength == 0 )); then ratio=1; else ratio=1$(eval printf '0%.0s' {1..$decimallength}); fi; fps=$(($(echo $fpsint$fpsdecimal) * 1001))
+	else echo -e "Error: The sub2srt parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970"; exit 1
+	fi
+
+	if [[ "${inputfilename##*.}" != "sub" ]]; then
+		echo "Warning: \"$inputfilename\" does not have '.sub' extension"
+	fi
+
+
+	unix2dos -q "$inputfilename"
+
+	# Read text file to array
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	for line in $(cat "$inputfilename"); do
+		arraysub+=($line)
+	done
+
+	IFS=$old_IFS		# restore default field separator
+
+
+	arraysrt=()
+
+	# Process the arraysub and at the same time create the arraysrt
+	regexsub="^\{([0-9]+)\}\{([0-9]+)\}(.+)$"
+	regexsub1="^\{[1]\}\{[1]\}(.+)$"
+
+	linecounter=0
+	IFS=$'|'			# new field separator, the new line character in sub file
+
+	for ((i=0; i<=${#arraysub[@]}-1; i++)); do
+		line=${arraysub[$i]}
+
+		if ! [[ $line =~ $regexsub1 ]] && [[ $line =~ $regexsub ]]; then
+			framesstart="${BASH_REMATCH[1]}"
+			framesend="${BASH_REMATCH[2]}"
+			subs="${BASH_REMATCH[3]}"
+
+			p1=$((1001000 * $ratio * $framesstart / $fps))
+			p2=$((1001000 * $ratio * $framesend / $fps))
+
+			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1 / 3600000)) $(($(($p1 % 3600000)) / 60000)) $(($(($p1 % 60000)) / 1000)) $(($p1 % 1000)))
+			j2=$(printf "%02d:%02d:%02d,%03d" $(($p2 / 3600000)) $(($(($p2 % 3600000)) / 60000)) $(($(($p2 % 60000)) / 1000)) $(($p2 % 1000)))
+
+			read -r -a arraysubs <<< "$subs"
+
+			((linecounter++))
+			arraysrt+=("$linecounter")
+			arraysrt+=("$j1 --> $j2")
+			arraysrt+=("${arraysubs[@]}")
+			arraysrt+=("")
+		elif [[ $line == "" ]] || (( ${#line} == 1 )) || [[ $line =~ $regexsub1 ]]; then
+			:
+		else
+			echo "Warning: There's something wrong with line $(($i+1)) in the sub file"
+		fi
+	done
+
+	IFS=$old_IFS		# restore default field separator
+
+
+	# Write to the txt file the contents of array.
+	if (( ${#arraysrt[@]} > 2 )); then
+		newfilename="${inputfilename%.*}.srt"
+		echo "Converting \"$inputfilename\" to \"$newfilename\"..."
+		printf "%s\n" "${arraysrt[@]}" > "$newfilename"
+	else
+		echo "Error: Not a valid sub file"; exit 1
+	fi
+}
+
+
 if [[ $inputfilename ]]; then
 	if [[ $shifttime ]]; then
 		shift_time
@@ -541,6 +621,8 @@ if [[ $inputfilename ]]; then
 		replace_text
 	elif [[ $replace3 ]]; then
 		replace_text
+	elif [[ $sub2srt ]]; then
+		sub2_srt
 	fi
 	exit 0
 fi
