@@ -39,12 +39,12 @@ get_help ()
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:y:e:E:t:h" opt); then
+if ( ! getopts ":i:s:pna:y:e:E:t:u:h" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:y:e:E:t:h" parameter; do
+while getopts ":i:s:pna:y:e:E:t:u:h" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
@@ -61,6 +61,7 @@ while getopts ":i:s:pna:y:e:E:t:h" parameter; do
 			eval "replace4=\$$((OPTIND))"
 			((OPTIND++)) ;;
 		t) sub2srt=$OPTARG ;;
+		u) srt2sub=$OPTARG ;;
 		h) get_help ;;
 		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
 	esac
@@ -606,6 +607,123 @@ sub2_srt ()
 }
 
 
+srt2_sub ()
+{
+	if [[ $srt2sub == "pal" ]]; then ratio=1; fps=25025; firstline="{1}{1}25.000"
+	elif [[ $srt2sub == "film" ]]; then ratio=1; fps=24000; firstline="{1}{1}23.976"
+	elif [[ $srt2sub == "ntsc" ]]; then ratio=1; fps=30000; firstline="{1}{1}29.970"
+	elif [[ $srt2sub =~ ^[0-9]+$ ]]; then ratio=1; fps=$(($srt2sub * 1001)); firstline="{1}{1}$srt2sub.000"
+	elif [[ $srt2sub =~ ^[0-9]+\.[0-9]*$ ]]; then fpsint=${srt2sub%.*}; fpsdecimal=${srt2sub##*.}; decimallength=${#fpsdecimal}; if (( $decimallength == 0 )); then ratio=1; trizero="000"; firstline="{1}{1}$srt2sub$trizero"; else ratio=1$(eval printf '0%.0s' {1..$decimallength}); firstline="{1}{1}$srt2sub"; fi; fps=$(($(echo $fpsint$fpsdecimal) * 1001))
+	else echo -e "Error: The srt2sub parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970"; exit 1
+	fi
+
+	if [[ "${inputfilename##*.}" != "srt" ]]; then
+		echo "Warning: \"$inputfilename\" does not have '.srt' extension"
+	fi
+
+
+	unix2dos -q "$inputfilename"
+
+	# Read text file to array
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+	
+	for line in $(cat "$inputfilename"); do
+		arraysrt+=($line)
+	done
+
+
+	# Remove non necessary lines
+	regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
+
+	newarraysrt=()
+	for ((i=0; i<=${#arraysrt[@]}; i++)); do
+		if [[ ${arraysrt[$(($i + 1))]} =~ $regextime ]] || [[ ${arraysrt[$(($i + 2))]} =~ $regextime ]]; then
+			:
+		else
+			newarraysrt+=(${arraysrt[$i]})
+		fi
+	done
+
+
+	# Process the newarraysrt and at the same time create the arraysub
+	IFS=$'\r'
+	elementsub=()
+	stringsub=()
+	timesub=""
+	arraysub=()
+	arraysub+=($firstline)
+	for ((i=0; i<${#newarraysrt[@]}; i++)); do
+		line=${newarraysrt[$i]}
+
+		if [[ $line =~ $regextime ]]; then
+			# Remove empty lines at the end
+			while :; do
+				if (( ${#elementsub[-1]} == 1 )); then
+					unset elementsub[-1]
+				else
+					break
+				fi
+			done
+
+			for k in "${elementsub[@]}"; do
+				stringsub=${stringsub:+$stringsub}$k
+			done
+			arraysub+=($timesub$stringsub)
+
+			unset elementsub
+			stringsub=""
+			h1="${BASH_REMATCH[1]}"
+			m1="${BASH_REMATCH[2]}"
+			s1="${BASH_REMATCH[3]}"
+			f1="${BASH_REMATCH[4]}"
+
+			h2="${BASH_REMATCH[5]}"
+			m2="${BASH_REMATCH[6]}"
+			s2="${BASH_REMATCH[7]}"
+			f2="${BASH_REMATCH[8]}"
+
+			p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+			p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$f2))))
+
+			framesstart=$(($fps * $p1 / (($ratio * 1001000))))
+			framesend=$(($fps * $p2 / (($ratio * 1001000))))
+
+			timesub="{$framesstart}{$framesend}"
+
+		elif [[ $elementsub ]]; then
+			elementsub+=(\|$line)
+		else
+			elementsub+=($line)
+		fi
+	done
+
+	# Remove empty lines at the end
+	while :; do
+		if (( ${#elementsub[-1]} == 1 )); then
+			unset elementsub[-1]
+		else
+			break
+		fi
+	done
+
+	for k in "${elementsub[@]}"; do
+		stringsub=${stringsub:+$stringsub}$k
+	done
+	arraysub+=($timesub$stringsub)
+
+	# Write to the txt file the contents of array.
+	if (( ${#arraysub[@]} >= 1 )); then
+		newfilename="${inputfilename%.*}.sub"
+		echo "Converting \"$inputfilename\" to \"$newfilename\"..."
+		printf "%s\n" "${arraysub[@]}" > "$newfilename"
+	else
+		echo "Error: Not a valid srt file"; exit 1
+	fi
+	IFS=$old_IFS		# restore default field separator
+}
+
+
 if [[ $inputfilename ]]; then
 	if [[ $shifttime ]]; then
 		shift_time
@@ -623,6 +741,8 @@ if [[ $inputfilename ]]; then
 		replace_text
 	elif [[ $sub2srt ]]; then
 		sub2_srt
+	elif [[ $srt2sub ]]; then
+		srt2_sub
 	fi
 	exit 0
 fi
