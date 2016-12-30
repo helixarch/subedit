@@ -533,7 +533,7 @@ sub2_srt ()
 	elif [[ $sub2srt == "film" ]]; then ratio=1; fps=24000
 	elif [[ $sub2srt == "ntsc" ]]; then ratio=1; fps=30000
 	elif [[ $sub2srt =~ ^[0-9]+$ ]]; then ratio=1; fps=$(($sub2srt * 1001))
-	elif [[ $sub2srt =~ ^[0-9]+\.[0-9]*$ ]]; then custom="True"; fpsint=${sub2srt%.*}; fpsdecimal=${sub2srt##*.}; decimallength=${#fpsdecimal}; if (( $decimallength == 0 )); then ratio=1; else ratio=1$(eval printf '0%.0s' {1..$decimallength}); fi; fps=$(($(echo $fpsint$fpsdecimal) * 1001))
+	elif [[ $sub2srt =~ ^[0-9]+\.[0-9]*$ ]]; then fpsint=${sub2srt%.*}; fpsdecimal=${sub2srt##*.}; decimallength=${#fpsdecimal}; if (( $decimallength == 0 )); then ratio=1; else ratio=1$(eval printf '0%.0s' {1..$decimallength}); fi; fps=$(($(echo $fpsint$fpsdecimal) * 1001))
 	else echo -e "Error: The sub2srt parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970"; exit 1
 	fi
 
