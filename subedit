@@ -549,7 +549,8 @@ sub2_srt ()
 	old_IFS=$IFS		# save the field separator
 	IFS=$'\n'			# new field separator, the end of line
 
-	for line in $(cat "$inputfilename"); do
+	encoding=$(file -b --mime-encoding $inputfilename)
+	for line in $(iconv -f $encoding -t utf-8 "$inputfilename"); do
 		arraysub+=($line)
 	done
 
@@ -600,7 +601,7 @@ sub2_srt ()
 	if (( ${#arraysrt[@]} > 2 )); then
 		newfilename="${inputfilename%.*}.srt"
 		echo "Converting \"$inputfilename\" to \"$newfilename\"..."
-		printf "%s\n" "${arraysrt[@]}" > "$newfilename"
+		printf "%s\n" "${arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
 		echo "Error: Not a valid sub file"; exit 1
 	fi
