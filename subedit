@@ -653,6 +653,17 @@ srt2_sub ()
 	framesub=""
 	arraysub=()
 	arraysub+=($firstline)
+
+	# This was put inside a function because it needs to run twice
+	add_arraysub_element ()
+	{
+		for j in "${elementsub[@]}"; do
+			stringsub=${stringsub:+$stringsub}$j
+		done
+
+		arraysub+=($framesub$stringsub)
+	}
+
 	for ((i=0; i<${#newarraysrt[@]}; i++)); do
 		line=${newarraysrt[$i]}
 
@@ -666,13 +677,6 @@ srt2_sub ()
 				fi
 			done
 
-			for k in "${elementsub[@]}"; do
-				stringsub=${stringsub:+$stringsub}$k
-			done
-			arraysub+=($framesub$stringsub)
-
-			unset elementsub
-			stringsub=""
 			h1="${BASH_REMATCH[1]}"
 			m1="${BASH_REMATCH[2]}"
 			s1="${BASH_REMATCH[3]}"
@@ -688,6 +692,11 @@ srt2_sub ()
 
 			framesstart=$(($fps * $p1 / (($ratio * 1001000))))
 			framesend=$(($fps * $p2 / (($ratio * 1001000))))
+
+			add_arraysub_element
+
+			unset elementsub
+			stringsub=""
 
 			framesub="{$framesstart}{$framesend}"
 
@@ -707,10 +716,8 @@ srt2_sub ()
 		fi
 	done
 
-	for k in "${elementsub[@]}"; do
-		stringsub=${stringsub:+$stringsub}$k
-	done
-	arraysub+=($framesub$stringsub)
+	# Run for the last subtitle
+	add_arraysub_element
 
 	# Write to the txt file the contents of array.
 	if (( ${#arraysub[@]} >= 1 )); then
