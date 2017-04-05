@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 
-#	Copyright 2016 George Savvidis, Odysseas Raftopoulos
+#	Copyright 2016-2017 George Savvidis, Odysseas Raftopoulos
 
 #	This program is free software: you can redistribute it and/or modify
 #	it under the terms of the GNU General Public License as published by
@@ -285,10 +285,10 @@ adjust_time ()
 		fi
 	done
 
-	# Time in miliseconds of the start time of the first subtitle
+	# Time in milliseconds of the start time of the first subtitle
 	pa=$(($(($((10#$h1a)) * 3600000)) + $(($((10#$m1a)) * 60000)) + $(($((10#$s1a)) * 1000)) + $((10#$f1a))))
 
-	# Time in miliseconds of the start time of the last subtitle
+	# Time in milliseconds of the start time of the last subtitle
 	pb=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
 
 
@@ -451,10 +451,10 @@ synchronize_with_file ()
 		fi
 	done
 
-	# Time in miliseconds of the start time of the first subtitle
+	# Time in milliseconds of the start time of the first subtitle
 	pa=$(($(($((10#$h1a)) * 3600000)) + $(($((10#$m1a)) * 60000)) + $(($((10#$s1a)) * 1000)) + $((10#$f1a))))
 
-	# Time in miliseconds of the start time of the last subtitle
+	# Time in milliseconds of the start time of the last subtitle
 	pb=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
 
 
@@ -650,7 +650,7 @@ srt2_sub ()
 	IFS=$'\r'
 	elementsub=()
 	stringsub=()
-	timesub=""
+	framesub=""
 	arraysub=()
 	arraysub+=($firstline)
 	for ((i=0; i<${#newarraysrt[@]}; i++)); do
@@ -659,7 +659,7 @@ srt2_sub ()
 		if [[ $line =~ $regextime ]]; then
 			# Remove empty lines at the end
 			while :; do
-				if (( ${#elementsub[-1]} == 1 )); then
+				if (( ${#elementsub[@]} > 0 )) && (( ${#elementsub[-1]} == 1 )); then
 					unset elementsub[-1]
 				else
 					break
@@ -669,7 +669,7 @@ srt2_sub ()
 			for k in "${elementsub[@]}"; do
 				stringsub=${stringsub:+$stringsub}$k
 			done
-			arraysub+=($timesub$stringsub)
+			arraysub+=($framesub$stringsub)
 
 			unset elementsub
 			stringsub=""
@@ -689,7 +689,7 @@ srt2_sub ()
 			framesstart=$(($fps * $p1 / (($ratio * 1001000))))
 			framesend=$(($fps * $p2 / (($ratio * 1001000))))
 
-			timesub="{$framesstart}{$framesend}"
+			framesub="{$framesstart}{$framesend}"
 
 		elif [[ $elementsub ]]; then
 			elementsub+=(\|$line)
@@ -700,7 +700,7 @@ srt2_sub ()
 
 	# Remove empty lines at the end
 	while :; do
-		if (( ${#elementsub[-1]} == 1 )); then
+		if (( ${#elementsub[@]} > 0 )) && (( ${#elementsub[-1]} == 1 )); then
 			unset elementsub[-1]
 		else
 			break
@@ -710,7 +710,7 @@ srt2_sub ()
 	for k in "${elementsub[@]}"; do
 		stringsub=${stringsub:+$stringsub}$k
 	done
-	arraysub+=($timesub$stringsub)
+	arraysub+=($framesub$stringsub)
 
 	# Write to the txt file the contents of array.
 	if (( ${#arraysub[@]} >= 1 )); then
