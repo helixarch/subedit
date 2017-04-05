@@ -626,10 +626,12 @@ srt2_sub ()
 	unix2dos -q "$inputfilename"
 
 	# Read text file to array
+	# The encoding must be UTF-8
 	old_IFS=$IFS		# save the field separator
 	IFS=$'\n'			# new field separator, the end of line
-	
-	for line in $(cat "$inputfilename"); do
+
+	encoding=$(file -b --mime-encoding $inputfilename)
+	for line in $(iconv -f $encoding -t utf-8 "$inputfilename"); do
 		arraysrt+=($line)
 	done
 
@@ -655,12 +657,91 @@ srt2_sub ()
 	arraysub=()
 	arraysub+=($firstline)
 
+	# Regular expressions for srt tags. They contain possible sub tags because inside the loop they co-exist
+	regex_tag_i="^(\|?({[Yy]:[ibus]})*)((<[bus]>)*(<font[^>]*>)*(<[bus]>)*)<i>(.*)</i>((</[bus]>)*(</font>)*(</[bus]>)*)$"
+	regex_tag_b="^(\|?({[Yy]:[ibus]})*)((<[ius]>)*(<font[^>]*>)*(<[ius]>)*)<b>(.*)</b>((</[ius]>)*(</font>)*(</[ius]>)*)$"
+	regex_tag_u="^(\|?({[Yy]:[ibus]})*)((<[ibs]>)*(<font[^>]*>)*(<[ibs]>)*)<u>(.*)</u>((</[ibs]>)*(</font>)*(</[ibs]>)*)$"
+	regex_tag_s="^(\|?({[Yy]:[ibus]})*)((<[ibu]>)*(<font[^>]*>)*(<[ibu]>)*)<s>(.*)</s>((</[ibu]>)*(</font>)*(</[ibu]>)*)$"
+
+	# Regular expressions for multiple tags that need to become one
+	regex_merge_y_tags="^(\|?)({y:([ibus])})?({y:([ibus])})?({y:([ibus])})?({y:([ibus])})?(.*)$"
+	regex_merge_Y_tags="^({Y:([ibus])})?({Y:([ibus])})?({Y:([ibus])})?({Y:([ibus])})?(.*)$"
+
+	# Regular expression for removing the remaining srt tags
+	regexremove="(.*)<[/]?([ibus]|font[^>]*)>(.*)"
+
 	# This was put inside a function because it needs to run twice
 	add_arraysub_element ()
 	{
 		for j in "${elementsub[@]}"; do
+			# Search for "<i>" and "</i>", remove them from the text and add {Y:i} if the subtitle is 1 line or {y:i} if it's more
+			if [[ $j =~ $regex_tag_i ]] && ! [[ ${BASH_REMATCH[7]} == *"<i>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</i>"* ]]; then
+				if [[ ${#elementsub[@]} == 1 ]]; then
+					j="${BASH_REMATCH[1]}{Y:i}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+				else
+					j="${BASH_REMATCH[1]}{y:i}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+				fi
+			fi
+
+			# Search for "<b>" and "</b>", remove them from the text and add {Y:b} if the subtitle is 1 line or {y:b} if it's more
+			if [[ $j =~ $regex_tag_b ]] && ! [[ ${BASH_REMATCH[7]} == *"<b>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</b>"* ]]; then
+				if [[ ${#elementsub[@]} == 1 ]]; then
+					j="${BASH_REMATCH[1]}{Y:b}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+				else
+					j="${BASH_REMATCH[1]}{y:b}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+				fi
+			fi
+
+			# Search for "<u>" and "</u>", remove them from the text and add {Y:u} if the subtitle is 1 line or {y:u} if it's more
+			if [[ $j =~ $regex_tag_u ]] && ! [[ ${BASH_REMATCH[7]} == *"<u>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</u>"* ]]; then
+				if [[ ${#elementsub[@]} == 1 ]]; then
+					j="${BASH_REMATCH[1]}{Y:u}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+				else
+					j="${BASH_REMATCH[1]}{y:u}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+				fi
+			fi
+
+			# Search for "<s>" and "</s>", remove them from the text and add {Y:s} if the subtitle is 1 line or {y:s} if it's more
+			if [[ $j =~ $regex_tag_s ]] && ! [[ ${BASH_REMATCH[7]} == *"<s>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</s>"* ]]; then
+				if [[ ${#elementsub[@]} == 1 ]]; then
+					j="${BASH_REMATCH[1]}{Y:s}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+				else
+					j="${BASH_REMATCH[1]}{y:s}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+				fi
+			fi
+
+			# Merge multiple y tags
+			if [[ $j =~ $regex_merge_y_tags ]] && [[ ${BASH_REMATCH[2]} ]]; then
+				j="${BASH_REMATCH[1]}{y:${BASH_REMATCH[3]}${BASH_REMATCH[5]}${BASH_REMATCH[7]}${BASH_REMATCH[9]}}${BASH_REMATCH[10]}"
+			fi
+
 			stringsub=${stringsub:+$stringsub}$j
 		done
+
+		# Search for "<s>" and "</s>" that enclose all lines, remove them from the text and add {Y:s}
+		if [[ $stringsub =~ $regex_tag_s ]] && ! [[ ${BASH_REMATCH[7]} == *"<s>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</s>"* ]]; then
+			stringsub="{Y:s}${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+		fi
+
+		# Search for "<u>" and "</u>" that enclose all lines, remove them from the text and add {Y:u}
+		if [[ $stringsub =~ $regex_tag_u ]] && ! [[ ${BASH_REMATCH[7]} == *"<u>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</u>"* ]]; then
+			stringsub="{Y:u}${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+		fi
+
+		# Search for "<b>" and "</b>" that enclose all lines, remove them from the text and add {Y:b}
+		if [[ $stringsub =~ $regex_tag_b ]] && ! [[ ${BASH_REMATCH[7]} == *"<b>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</b>"* ]]; then
+			stringsub="{Y:b}${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+		fi
+
+		# Search for "<i>" and "</i>" that enclose all lines, remove them from the text and add {Y:i}
+		if [[ $stringsub =~ $regex_tag_i ]] && ! [[ ${BASH_REMATCH[7]} == *"<i>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</i>"* ]]; then
+			stringsub="{Y:i}${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+		fi
+
+		# Merge multiple Y tags
+		if [[ $stringsub =~ $regex_merge_Y_tags ]] && [[ ${BASH_REMATCH[1]} ]]; then
+			stringsub="{Y:${BASH_REMATCH[2]}${BASH_REMATCH[4]}${BASH_REMATCH[6]}${BASH_REMATCH[8]}}${BASH_REMATCH[9]}"
+		fi
 
 		arraysub+=($framesub$stringsub)
 	}
@@ -724,7 +805,7 @@ srt2_sub ()
 	if (( ${#arraysub[@]} >= 1 )); then
 		newfilename="${inputfilename%.*}.sub"
 		echo "Converting \"$inputfilename\" to \"$newfilename\"..."
-		printf "%s\n" "${arraysub[@]}" > "$newfilename"
+		printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
 		echo "Error: Not a valid srt file"; exit 1
 	fi
