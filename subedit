@@ -17,6 +17,12 @@
 #	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+# Define regular expressions
+regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
+regexsub="^\{([0-9]+)\}\{([0-9]+)\}(.+)$"
+regexsub1="^\{[1]\}\{[1]\}(.+)$"
+
+
 # Help
 get_help ()
 {
@@ -108,8 +114,6 @@ shift_time ()
 
 
 	# Process the array
-	regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
-
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		line=${arraysrt[$i]}
 
@@ -171,8 +175,6 @@ change_fps ()
 
 
 	# Process the array
-	regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
-
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		line=${arraysrt[$i]}
 
@@ -258,8 +260,6 @@ adjust_time ()
 
 
 	# Find the first and last subtitle time
-	regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
-
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		line=${arraysrt[$i]}
 
@@ -368,8 +368,6 @@ synchronize_with_file ()
 
 
 	# Find the first and last subtitle time of the file to synchronize to
-	regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
-
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		line=${arraysrt[$i]}
 
@@ -561,9 +559,6 @@ sub2_srt ()
 	arraysrt=()
 
 	# Process the arraysub and at the same time create the arraysrt
-	regexsub="^\{([0-9]+)\}\{([0-9]+)\}(.+)$"
-	regexsub1="^\{[1]\}\{[1]\}(.+)$"
-
 	linecounter=0
 	IFS=$'|'			# new field separator, the new line character in sub file
 
@@ -638,8 +633,6 @@ srt2_sub ()
 
 
 	# Remove non necessary lines
-	regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
-
 	newarraysrt=()
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		if [[ ${arraysrt[$(($i + 1))]} =~ $regextime ]] || [[ ${arraysrt[$(($i + 2))]} =~ $regextime ]]; then
