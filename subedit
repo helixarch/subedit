@@ -650,6 +650,154 @@ srt2_sub ()
 	done
 
 
+	# Assosiative array of color names converted to values used by the sub subtitles
+	declare -A colornames
+
+	colornames[indianred]="\$5C5CCD"
+	colornames[lightcoral]="\$8080F0"
+	colornames[salmon]="\$7280FA"
+	colornames[darksalmon]="\$7A96E9"
+	colornames[lightsalmon]="\$7AA0FF"
+	colornames[crimson]="\$3C14DC"
+	colornames[red]="\$0000FF"
+	colornames[firebrick]="\$2222B2"
+	colornames[darkred]="\$00008B"
+	colornames[pink]="\$CBC0FF"
+	colornames[lightpink]="\$C1B6FF"
+	colornames[hotpink]="\$B469FF"
+	colornames[deeppink]="\$9314FF"
+	colornames[mediumvioletred]="\$8515C7"
+	colornames[palevioletred]="\$9370DB"
+	colornames[lightsalmon]="\$7AA0FF"
+	colornames[coral]="\$507FFF"
+	colornames[tomato]="\$4763FF"
+	colornames[orangered]="\$0045FF"
+	colornames[darkorange]="\$008CFF"
+	colornames[orange]="\$00A5FF"
+	colornames[gold]="\$00D7FF"
+	colornames[yellow]="\$00FFFF"
+	colornames[lightyellow]="\$E0FFFF"
+	colornames[lemonchiffon]="\$CDFAFF"
+	colornames[lightgoldenrodyellow]="\$D2FAFA"
+	colornames[papayawhip]="\$D5EFFF"
+	colornames[moccasin]="\$B5E4FF"
+	colornames[peachpuff]="\$B9DAFF"
+	colornames[palegoldenrod]="\$AAE8EE"
+	colornames[khaki]="\$8CE6F0"
+	colornames[darkkhaki]="\$6BB7BD"
+	colornames[lavender]="\$FAE6E6"
+	colornames[thistle]="\$D8BFD8"
+	colornames[plum]="\$DDA0DD"
+	colornames[violet]="\$EE82EE"
+	colornames[orchid]="\$D670DA"
+	colornames[fuchsia]="\$FF00FF"
+	colornames[magenta]="\$FF00FF"
+	colornames[mediumorchid]="\$D355BA"
+	colornames[mediumpurple]="\$DB7093"
+	colornames[rebeccapurple]="\$993366"
+	colornames[blueviolet]="\$E22B8A"
+	colornames[darkviolet]="\$D30094"
+	colornames[darkorchid]="\$CC3299"
+	colornames[darkmagenta]="\$8B008B"
+	colornames[purple]="\$800080"
+	colornames[indigo]="\$82004B"
+	colornames[slateblue]="\$CD5A6A"
+	colornames[darkslateblue]="\$8B3D48"
+	colornames[mediumslateblue]="\$EE687B"
+	colornames[greenyellow]="\$2FFFAD"
+	colornames[chartreuse]="\$00FF7F"
+	colornames[lawngreen]="\$00FC7C"
+	colornames[lime]="\$00FF00"
+	colornames[limegreen]="\$32CD32"
+	colornames[palegreen]="\$98FB98"
+	colornames[lightgreen]="\$90EE90"
+	colornames[mediumspringgreen]="\$9AFA00"
+	colornames[springgreen]="\$7FFF00"
+	colornames[mediumseagreen]="\$71B33C"
+	colornames[seagreen]="\$578B2E"
+	colornames[forestgreen]="\$228B22"
+	colornames[green]="\$008000"
+	colornames[darkgreen]="\$006400"
+	colornames[yellowgreen]="\$32CD9A"
+	colornames[olivedrab]="\$238E6B"
+	colornames[olive]="\$008080"
+	colornames[darkolivegreen]="\$2F6B55"
+	colornames[mediumaquamarine]="\$AACD66"
+	colornames[darkseagreen]="\$8BBC8F"
+	colornames[lightseagreen]="\$AAB220"
+	colornames[darkcyan]="\$8B8B00"
+	colornames[teal]="\$808000"
+	colornames[aqua]="\$FFFF00"
+	colornames[cyan]="\$FFFF00"
+	colornames[lightcyan]="\$FFFFE0"
+	colornames[paleturquoise]="\$EEEEAF"
+	colornames[aquamarine]="\$D4FF7F"
+	colornames[turquoise]="\$D0E040"
+	colornames[mediumturquoise]="\$CCD148"
+	colornames[darkturquoise]="\$D1CE00"
+	colornames[cadetblue]="\$A09E5F"
+	colornames[steelblue]="\$B48246"
+	colornames[lightsteelblue]="\$DEC4B0"
+	colornames[powderblue]="\$E6E0B0"
+	colornames[lightblue]="\$E6D8AD"
+	colornames[skyblue]="\$EBCE87"
+	colornames[lightskyblue]="\$FACE87"
+	colornames[deepskyblue]="\$FFBF00"
+	colornames[dodgerblue]="\$FF901E"
+	colornames[cornflowerblue]="\$ED9564"
+	colornames[mediumslateblue]="\$EE687B"
+	colornames[royalblue]="\$E16941"
+	colornames[blue]="\$FF0000"
+	colornames[mediumblue]="\$CD0000"
+	colornames[darkblue]="\$8B0000"
+	colornames[navy]="\$800000"
+	colornames[midnightblue]="\$701919"
+	colornames[cornsilk]="\$DCF8FF"
+	colornames[blanchedalmond]="\$CDEBFF"
+	colornames[bisque]="\$C4E4FF"
+	colornames[navajowhite]="\$ADDEFF"
+	colornames[wheat]="\$B3DEF5"
+	colornames[burlywood]="\$87B8DE"
+	colornames[tan]="\$8CB4D2"
+	colornames[rosybrown]="\$8F8FBC"
+	colornames[sandybrown]="\$60A4F4"
+	colornames[goldenrod]="\$20A5DA"
+	colornames[darkgoldenrod]="\$0B86B8"
+	colornames[peru]="\$3F85CD"
+	colornames[chocolate]="\$1E69D2"
+	colornames[saddlebrown]="\$13458B"
+	colornames[sienna]="\$2D52A0"
+	colornames[brown]="\$2A2AA5"
+	colornames[maroon]="\$000080"
+	colornames[white]="\$FFFFFF"
+	colornames[snow]="\$FAFAFF"
+	colornames[honeydew]="\$F0FFF0"
+	colornames[mintcream]="\$FAFFF5"
+	colornames[azure]="\$FFFFF0"
+	colornames[aliceblue]="\$FFF8F0"
+	colornames[ghostwhite]="\$FFF8F8"
+	colornames[whitesmoke]="\$F5F5F5"
+	colornames[seashell]="\$EEF5FF"
+	colornames[beige]="\$DCF5F5"
+	colornames[oldlace]="\$E6F5FD"
+	colornames[floralwhite]="\$F0FAFF"
+	colornames[ivory]="\$F0FFFF"
+	colornames[antiquewhite]="\$D7EBFA"
+	colornames[linen]="\$E6F0FA"
+	colornames[lavenderblush]="\$F5F0FF"
+	colornames[mistyrose]="\$E1E4FF"
+	colornames[gainsboro]="\$DCDCDC"
+	colornames[lightgray]="\$D3D3D3"
+	colornames[silver]="\$C0C0C0"
+	colornames[darkgray]="\$A9A9A9"
+	colornames[gray]="\$808080"
+	colornames[dimgray]="\$696969"
+	colornames[lightslategray]="\$998877"
+	colornames[slategray]="\$908070"
+	colornames[darkslategray]="\$4F4F2F"
+	colornames[black]="\$000000"
+
+
 	# Process the newarraysrt and at the same time create the arraysub
 	IFS=$'\r'
 	elementsub=()
@@ -658,15 +806,22 @@ srt2_sub ()
 	arraysub=()
 	arraysub+=($firstline)
 
+	# Regular expression of srt color code
+	regexsrtcolor="([a-fA-F0-9]{2})([a-fA-F0-9]{2})([a-fA-F0-9]{2})"
+
 	# Regular expressions for srt tags. They contain possible sub tags because inside the loop they co-exist
-	regex_tag_i="^(\|?({[Yy]:[ibus]})*)((<[bus]>)*(<font[^>]*>)*(<[bus]>)*)<i>(.*)</i>((</[bus]>)*(</font>)*(</[bus]>)*)$"
-	regex_tag_b="^(\|?({[Yy]:[ibus]})*)((<[ius]>)*(<font[^>]*>)*(<[ius]>)*)<b>(.*)</b>((</[ius]>)*(</font>)*(</[ius]>)*)$"
-	regex_tag_u="^(\|?({[Yy]:[ibus]})*)((<[ibs]>)*(<font[^>]*>)*(<[ibs]>)*)<u>(.*)</u>((</[ibs]>)*(</font>)*(</[ibs]>)*)$"
-	regex_tag_s="^(\|?({[Yy]:[ibus]})*)((<[ibu]>)*(<font[^>]*>)*(<[ibu]>)*)<s>(.*)</s>((</[ibu]>)*(</font>)*(</[ibu]>)*)$"
+	regex_tag_i="^(\|?({[Yy]:[ibus]+})*(\{[Cc]:[$][A-F0-9]{6}\})?(\{[Ss]:[0-9]+\})?({[Yy]:[ibus]+})*)((<[bus]>)*(<font[^>]*>)*(<[bus]>)*)<i>(.*)</i>((</[bus]>)*(</font>)*(</[bus]>)*)$"
+	regex_tag_b="^(\|?({[Yy]:[ibus]+})*(\{[Cc]:[$][A-F0-9]{6}\})?(\{[Ss]:[0-9]+\})?({[Yy]:[ibus]+})*)((<[ius]>)*(<font[^>]*>)*(<[ius]>)*)<b>(.*)</b>((</[ius]>)*(</font>)*(</[ius]>)*)$"
+	regex_tag_u="^(\|?({[Yy]:[ibus]+})*(\{[Cc]:[$][A-F0-9]{6}\})?(\{[Ss]:[0-9]+\})?({[Yy]:[ibus]+})*)((<[ibs]>)*(<font[^>]*>)*(<[ibs]>)*)<u>(.*)</u>((</[ibs]>)*(</font>)*(</[ibs]>)*)$"
+	regex_tag_s="^(\|?({[Yy]:[ibus]+})*(\{[Cc]:[$][A-F0-9]{6}\})?(\{[Ss]:[0-9]+\})?({[Yy]:[ibus]+})*)((<[ibu]>)*(<font[^>]*>)*(<[ibu]>)*)<s>(.*)</s>((</[ibu]>)*(</font>)*(</[ibu]>)*)$"
+	regex_tag_font_color="^(\|?({[Yy]:[ibus]+})*(\{[Cc]:[$][A-F0-9]{6}\})?(\{[Ss]:[0-9]+\})?({[Yy]:[ibus]+})*)((<[ibus]>)*)<font[[:blank:]]*color[[:blank:]]*=[[:blank:]]*\"?[[:blank:]]*#?[[:blank:]]*([^> \"]*)[[:blank:]]*\"?[[:blank:]]*>(.*)</font>((</[ibus]>)*)$"
+	regex_tag_font_size="^(\|?({[Yy]:[ibus]+})*(\{[Cc]:[$][A-F0-9]{6}\})?(\{[Ss]:[0-9]+\})?({[Yy]:[ibus]+})*)((<[ibus]>)*)<font[[:blank:]]*size[[:blank:]]*=[[:blank:]]*\"?[[:blank:]]*([0-9]+)[[:blank:]]*\"?[[:blank:]]*>(.*)</font>((</[ibus]>)*)$"
+	regex_tag_font_color_size="^(\|?({[Yy]:[ibus]+})*)((<[ibus]>)*)<font[[:blank:]]*color[[:blank:]]*=[[:blank:]]*\"?[[:blank:]]*#?[[:blank:]]*([^> \"]*)[[:blank:]]*\"?[[:blank:]]*size[[:blank:]]*=[[:blank:]]*\"?[[:blank:]]*([0-9]+)[[:blank:]]*\"?[[:blank:]]*>(.*)</font>((</[ibus]>)*)$"
+	regex_tag_font_size_color="^(\|?({[Yy]:[ibus]+})*)((<[ibus]>)*)<font[[:blank:]]*size[[:blank:]]*=[[:blank:]]*\"?[[:blank:]]*([0-9]+)[[:blank:]]*\"?[[:blank:]]*color[[:blank:]]*=[[:blank:]]*\"?[[:blank:]]*#?[[:blank:]]*([^> \"]*)[[:blank:]]*\"?[[:blank:]]*>(.*)</font>((</[ibus]>)*)$"
 
 	# Regular expressions for multiple tags that need to become one
-	regex_merge_y_tags="^(\|?)({y:([ibus])})?({y:([ibus])})?({y:([ibus])})?({y:([ibus])})?(.*)$"
-	regex_merge_Y_tags="^({Y:([ibus])})?({Y:([ibus])})?({Y:([ibus])})?({Y:([ibus])})?(.*)$"
+	regex_merge_y_tags="^(\|?(\{[Cc]:[$][A-F0-9]{6}\})?(\{[Ss]:[0-9]+\})?)({y:([ibus])})?({y:([ibus])})?({y:([ibus])})?({y:([ibus])})?(.*)$"
+	regex_merge_Y_tags="^((\{[Cc]:[$][A-F0-9]{6}\})?(\{[Ss]:[0-9]+\})?)({Y:([ibus])})?({Y:([ibus])})?({Y:([ibus])})?({Y:([ibus])})?(.*)$"
 
 	# Regular expression for removing the remaining srt tags
 	regexremove="(.*)<[/]?([ibus]|font[^>]*)>(.*)"
@@ -675,73 +830,357 @@ srt2_sub ()
 	add_arraysub_element ()
 	{
 		for j in "${elementsub[@]}"; do
-			# Search for "<i>" and "</i>", remove them from the text and add {Y:i} if the subtitle is 1 line or {y:i} if it's more
-			if [[ $j =~ $regex_tag_i ]] && ! [[ ${BASH_REMATCH[7]} == *"<i>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</i>"* ]]; then
-				if [[ ${#elementsub[@]} == 1 ]]; then
-					j="${BASH_REMATCH[1]}{Y:i}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+			# Search for "<font color ... size>" and "</font>", remove them from the text and add {C:$xxxxxx}{S:xx} if the subtitle is 1 line or {c:$xxxxxx}{s:xx} if it's more
+			if [[ $j =~ $regex_tag_font_color_size ]] && ! [[ ${BASH_REMATCH[7]} == *"<font"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</font>"* ]]; then
+				srtcolor=${BASH_REMATCH[5]}
+				size=${BASH_REMATCH[6]}
+				temptext1=${BASH_REMATCH[1]}
+				temptext2=${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}
+
+				for colorname in "${!colornames[@]}"; do
+					if [[ $colorname == ${srtcolor,,} ]]; then
+						colornamefound=$colorname
+						break
+					fi
+				done
+
+				if [[ $colornamefound ]]; then
+					subcolor=${colornames[$colornamefound]}
+					unset colornamefound
+				elif [[ $srtcolor =~ $regexsrtcolor ]]; then
+					subcolor="\$${BASH_REMATCH[3]}${BASH_REMATCH[2]}${BASH_REMATCH[1]}"
+					subcolor=${subcolor^^}
 				else
-					j="${BASH_REMATCH[1]}{y:i}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+					subcolor=""
+				fi
+
+				if [[ $subcolor ]] && [[ $size ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{C:$subcolor}{S:$size}$temptext2"
+					else
+						j="$temptext1{c:$subcolor}{s:$size}$temptext2"
+					fi
+				elif [[ $subcolor ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{C:$subcolor}$temptext2"
+					else
+						j="$temptext1{c:$subcolor}$temptext2"
+					fi
+				elif [[ $size ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{S:$size}$temptext2"
+					else
+						j="$temptext1{s:$size}$temptext2"
+					fi
+				else
+					j="$temptext1$temptext2"
+				fi
+			fi
+
+			# Search for "<font size ... color>" and "</font>", remove them from the text and add {C:$xxxxxx}{S:xx} if the subtitle is 1 line or {c:$xxxxxx}{s:xx} if it's more
+			if [[ $j =~ $regex_tag_font_size_color ]] && ! [[ ${BASH_REMATCH[7]} == *"<font"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</font>"* ]]; then
+				size=${BASH_REMATCH[5]}
+				srtcolor=${BASH_REMATCH[6]}
+				temptext1=${BASH_REMATCH[1]}
+				temptext2=${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}
+
+				for colorname in "${!colornames[@]}"; do
+					if [[ $colorname == ${srtcolor,,} ]]; then
+						colornamefound=$colorname
+						break
+					fi
+				done
+
+				if [[ $colornamefound ]]; then
+					subcolor=${colornames[$colornamefound]}
+					unset colornamefound
+				elif [[ $srtcolor =~ $regexsrtcolor ]]; then
+					subcolor="\$${BASH_REMATCH[3]}${BASH_REMATCH[2]}${BASH_REMATCH[1]}"
+					subcolor=${subcolor^^}
+				else
+					subcolor=""
+				fi
+
+				if [[ $subcolor ]] && [[ $size ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{C:$subcolor}{S:$size}$temptext2"
+					else
+						j="$temptext1{c:$subcolor}{s:$size}$temptext2"
+					fi
+				elif [[ $subcolor ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{C:$subcolor}$temptext2"
+					else
+						j="$temptext1{c:$subcolor}$temptext2"
+					fi
+				elif [[ $size ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{S:$size}$temptext2"
+					else
+						j="$temptext1{s:$size}$temptext2"
+					fi
+				else
+					j="$temptext1$temptext2"
+				fi
+			fi
+
+			# Search for "<font size>" and "</font>", remove them from the text and add {S:xx} if the subtitle is 1 line or {s:xx} if it's more
+			# This runs below a second time - not a mistake
+			if [[ $j =~ $regex_tag_font_size ]]; then
+				size=${BASH_REMATCH[8]}
+				temptext1=${BASH_REMATCH[1]}
+				temptext2=${BASH_REMATCH[6]}${BASH_REMATCH[9]}${BASH_REMATCH[10]}
+
+				if [[ $size ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{S:$size}$temptext2"
+					else
+						j="$temptext1{s:$size}$temptext2"
+					fi
+				else
+					j="$temptext1$temptext2"
+				fi
+			fi
+
+			# Search for "<font color>" and "</font>", remove them from the text and add {C:$xxxxxx} if the subtitle is 1 line or {c:$xxxxxx} if it's more
+			if [[ $j =~ $regex_tag_font_color ]]; then
+				srtcolor=${BASH_REMATCH[8]}
+				temptext1=${BASH_REMATCH[1]}
+				temptext2=${BASH_REMATCH[6]}${BASH_REMATCH[9]}${BASH_REMATCH[10]}
+
+				for colorname in "${!colornames[@]}"; do
+					if [[ $colorname == ${srtcolor,,} ]]; then
+						colornamefound=$colorname
+						break
+					fi
+				done
+
+				if [[ $colornamefound ]]; then
+					subcolor=${colornames[$colornamefound]}
+					unset colornamefound
+				elif [[ $srtcolor =~ $regexsrtcolor ]]; then
+					subcolor="\$${BASH_REMATCH[3]}${BASH_REMATCH[2]}${BASH_REMATCH[1]}"
+					subcolor=${subcolor^^}
+				else
+					subcolor=""
+				fi
+
+				if [[ $subcolor ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{C:$subcolor}$temptext2"
+					else
+						j="$temptext1{c:$subcolor}$temptext2"
+					fi
+				else
+					j="$temptext1$temptext2"
+				fi
+			fi
+
+			# Search for "<font size>" and "</font>", remove them from the text and add {S:xx} if the subtitle is 1 line or {s:xx} if it's more
+			if [[ $j =~ $regex_tag_font_size ]]; then
+				size=${BASH_REMATCH[8]}
+				temptext1=${BASH_REMATCH[1]}
+				temptext2=${BASH_REMATCH[6]}${BASH_REMATCH[9]}${BASH_REMATCH[10]}
+
+				if [[ $size ]]; then
+					if [[ ${#elementsub[@]} == 1 ]]; then
+						j="$temptext1{S:$size}$temptext2"
+					else
+						j="$temptext1{s:$size}$temptext2"
+					fi
+				else
+					j="$temptext1$temptext2"
+				fi
+			fi
+
+			# Search for "<i>" and "</i>", remove them from the text and add {Y:i} if the subtitle is 1 line or {y:i} if it's more
+			if [[ $j =~ $regex_tag_i ]] && ! [[ ${BASH_REMATCH[10]} == *"<i>"* ]] && ! [[ ${BASH_REMATCH[10]} == *"</i>"* ]]; then
+				if [[ ${#elementsub[@]} == 1 ]]; then
+					j="${BASH_REMATCH[1]}{Y:i}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
+				else
+					j="${BASH_REMATCH[1]}{y:i}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 				fi
 			fi
 
 			# Search for "<b>" and "</b>", remove them from the text and add {Y:b} if the subtitle is 1 line or {y:b} if it's more
-			if [[ $j =~ $regex_tag_b ]] && ! [[ ${BASH_REMATCH[7]} == *"<b>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</b>"* ]]; then
+			if [[ $j =~ $regex_tag_b ]] && ! [[ ${BASH_REMATCH[10]} == *"<b>"* ]] && ! [[ ${BASH_REMATCH[10]} == *"</b>"* ]]; then
 				if [[ ${#elementsub[@]} == 1 ]]; then
-					j="${BASH_REMATCH[1]}{Y:b}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+					j="${BASH_REMATCH[1]}{Y:b}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 				else
-					j="${BASH_REMATCH[1]}{y:b}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+					j="${BASH_REMATCH[1]}{y:b}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 				fi
 			fi
 
 			# Search for "<u>" and "</u>", remove them from the text and add {Y:u} if the subtitle is 1 line or {y:u} if it's more
-			if [[ $j =~ $regex_tag_u ]] && ! [[ ${BASH_REMATCH[7]} == *"<u>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</u>"* ]]; then
+			if [[ $j =~ $regex_tag_u ]] && ! [[ ${BASH_REMATCH[10]} == *"<u>"* ]] && ! [[ ${BASH_REMATCH[10]} == *"</u>"* ]]; then
 				if [[ ${#elementsub[@]} == 1 ]]; then
-					j="${BASH_REMATCH[1]}{Y:u}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+					j="${BASH_REMATCH[1]}{Y:u}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 				else
-					j="${BASH_REMATCH[1]}{y:u}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+					j="${BASH_REMATCH[1]}{y:u}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 				fi
 			fi
 
 			# Search for "<s>" and "</s>", remove them from the text and add {Y:s} if the subtitle is 1 line or {y:s} if it's more
-			if [[ $j =~ $regex_tag_s ]] && ! [[ ${BASH_REMATCH[7]} == *"<s>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</s>"* ]]; then
+			if [[ $j =~ $regex_tag_s ]] && ! [[ ${BASH_REMATCH[10]} == *"<s>"* ]] && ! [[ ${BASH_REMATCH[10]} == *"</s>"* ]]; then
 				if [[ ${#elementsub[@]} == 1 ]]; then
-					j="${BASH_REMATCH[1]}{Y:s}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+					j="${BASH_REMATCH[1]}{Y:s}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 				else
-					j="${BASH_REMATCH[1]}{y:s}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+					j="${BASH_REMATCH[1]}{y:s}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 				fi
 			fi
 
 			# Merge multiple y tags
-			if [[ $j =~ $regex_merge_y_tags ]] && [[ ${BASH_REMATCH[2]} ]]; then
-				j="${BASH_REMATCH[1]}{y:${BASH_REMATCH[3]}${BASH_REMATCH[5]}${BASH_REMATCH[7]}${BASH_REMATCH[9]}}${BASH_REMATCH[10]}"
+			if [[ $j =~ $regex_merge_y_tags ]] && [[ ${BASH_REMATCH[4]} ]]; then
+				j="${BASH_REMATCH[1]}{y:${BASH_REMATCH[5]}${BASH_REMATCH[7]}${BASH_REMATCH[9]}${BASH_REMATCH[11]}}${BASH_REMATCH[12]}"
 			fi
 
 			stringsub=${stringsub:+$stringsub}$j
 		done
 
 		# Search for "<s>" and "</s>" that enclose all lines, remove them from the text and add {Y:s}
-		if [[ $stringsub =~ $regex_tag_s ]] && ! [[ ${BASH_REMATCH[7]} == *"<s>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</s>"* ]]; then
-			stringsub="{Y:s}${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+		if [[ $stringsub =~ $regex_tag_s ]] && ! [[ ${BASH_REMATCH[10]} == *"<s>"* ]] && ! [[ ${BASH_REMATCH[10]} == *"</s>"* ]]; then
+			stringsub="{Y:s}${BASH_REMATCH[1]}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 		fi
 
 		# Search for "<u>" and "</u>" that enclose all lines, remove them from the text and add {Y:u}
-		if [[ $stringsub =~ $regex_tag_u ]] && ! [[ ${BASH_REMATCH[7]} == *"<u>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</u>"* ]]; then
-			stringsub="{Y:u}${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+		if [[ $stringsub =~ $regex_tag_u ]] && ! [[ ${BASH_REMATCH[10]} == *"<u>"* ]] && ! [[ ${BASH_REMATCH[10]} == *"</u>"* ]]; then
+			stringsub="{Y:u}${BASH_REMATCH[1]}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 		fi
 
 		# Search for "<b>" and "</b>" that enclose all lines, remove them from the text and add {Y:b}
-		if [[ $stringsub =~ $regex_tag_b ]] && ! [[ ${BASH_REMATCH[7]} == *"<b>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</b>"* ]]; then
-			stringsub="{Y:b}${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+		if [[ $stringsub =~ $regex_tag_b ]] && ! [[ ${BASH_REMATCH[10]} == *"<b>"* ]] && ! [[ ${BASH_REMATCH[10]} == *"</b>"* ]]; then
+			stringsub="{Y:b}${BASH_REMATCH[1]}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
 		fi
 
 		# Search for "<i>" and "</i>" that enclose all lines, remove them from the text and add {Y:i}
-		if [[ $stringsub =~ $regex_tag_i ]] && ! [[ ${BASH_REMATCH[7]} == *"<i>"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</i>"* ]]; then
-			stringsub="{Y:i}${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}"
+		if [[ $stringsub =~ $regex_tag_i ]] && ! [[ ${BASH_REMATCH[10]} == *"<i>"* ]] && ! [[ ${BASH_REMATCH[10]} == *"</i>"* ]]; then
+			stringsub="{Y:i}${BASH_REMATCH[1]}${BASH_REMATCH[6]}${BASH_REMATCH[10]}${BASH_REMATCH[11]}"
+		fi
+
+		# Search for "<font color ... size>" and "</font>" that enclose all lines, remove them from the text and add {C:$xxxxxx}{S:xx}
+		if [[ $stringsub =~ $regex_tag_font_color_size ]] && ! [[ ${BASH_REMATCH[7]} == *"<font"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</font>"* ]]; then
+			srtcolor=${BASH_REMATCH[5]}
+			size=${BASH_REMATCH[6]}
+			temptext=${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}
+
+			for colorname in "${!colornames[@]}"; do
+				if [[ $colorname == ${srtcolor,,} ]]; then
+					colornamefound=$colorname
+					break
+				fi
+			done
+
+			if [[ $colornamefound ]]; then
+				subcolor=${colornames[$colornamefound]}
+				unset colornamefound
+			elif [[ $srtcolor =~ $regexsrtcolor ]]; then
+				subcolor="\$${BASH_REMATCH[3]}${BASH_REMATCH[2]}${BASH_REMATCH[1]}"
+				subcolor=${subcolor^^}
+			else
+				subcolor=""
+			fi
+
+			if [[ $subcolor ]] && [[ $size ]]; then
+				stringsub="{C:$subcolor}{S:$size}$temptext"
+			elif [[ $subcolor ]]; then
+				stringsub="{C:$subcolor}$temptext"
+			elif [[ $size ]]; then
+				stringsub="{S:$size}$temptext"
+			else
+				stringsub="$temptext"
+			fi
+		fi
+
+		# Search for "<font size ... color>" and "</font>" that enclose all lines, remove them from the text and add {C:$xxxxxx}{S:xx}
+		if [[ $stringsub =~ $regex_tag_font_size_color ]] && ! [[ ${BASH_REMATCH[7]} == *"<font"* ]] && ! [[ ${BASH_REMATCH[7]} == *"</font>"* ]]; then
+			size=${BASH_REMATCH[5]}
+			srtcolor=${BASH_REMATCH[6]}
+			temptext=${BASH_REMATCH[1]}${BASH_REMATCH[3]}${BASH_REMATCH[7]}${BASH_REMATCH[8]}
+
+			for colorname in "${!colornames[@]}"; do
+				if [[ $colorname == ${srtcolor,,} ]]; then
+					colornamefound=$colorname
+					break
+				fi
+			done
+
+			if [[ $colornamefound ]]; then
+				subcolor=${colornames[$colornamefound]}
+				unset colornamefound
+			elif [[ $srtcolor =~ $regexsrtcolor ]]; then
+				subcolor="\$${BASH_REMATCH[3]}${BASH_REMATCH[2]}${BASH_REMATCH[1]}"
+				subcolor=${subcolor^^}
+			else
+				subcolor=""
+			fi
+
+			if [[ $subcolor ]] && [[ $size ]]; then
+				stringsub="{C:$subcolor}{S:$size}$temptext"
+			elif [[ $subcolor ]]; then
+				stringsub="{C:$subcolor}$temptext"
+			elif [[ $size ]]; then
+				stringsub="{S:$size}$temptext"
+			else
+				stringsub="$temptext"
+			fi
+		fi
+
+		# Search for "<font size>" and "</font>" that enclose all lines, remove them from the text and add {S:xx} if the subtitle is 1 line or {s:xx} if it's more
+		# This runs below a second time - not a mistake
+		if [[ $stringsub =~ $regex_tag_font_size ]]; then
+			size=${BASH_REMATCH[8]}
+			temptext=${BASH_REMATCH[1]}${BASH_REMATCH[6]}${BASH_REMATCH[9]}${BASH_REMATCH[10]}
+
+			if [[ $size ]]; then
+				stringsub="{S:$size}$temptext"
+			else
+				stringsub="$temptext"
+			fi
+		fi
+
+		# Search for "<font color>" and "</font>" that enclose all lines, remove them from the text and add {C:$xxxxxx}
+		if [[ $stringsub =~ $regex_tag_font_color ]]; then
+			srtcolor=${BASH_REMATCH[8]}
+			temptext=${BASH_REMATCH[1]}${BASH_REMATCH[6]}${BASH_REMATCH[9]}${BASH_REMATCH[10]}
+			for colorname in "${!colornames[@]}"; do
+				if [[ $colorname == ${srtcolor,,} ]]; then
+					colornamefound=$colorname
+					break
+				fi
+			done
+
+			if [[ $colornamefound ]]; then
+				subcolor=${colornames[$colornamefound]}
+				unset colornamefound
+			elif [[ $srtcolor =~ $regexsrtcolor ]]; then
+				subcolor="\$${BASH_REMATCH[3]}${BASH_REMATCH[2]}${BASH_REMATCH[1]}"
+				subcolor=${subcolor^^}
+			else
+				subcolor=""
+			fi
+
+			if [[ $subcolor ]]; then
+				stringsub="{C:$subcolor}$temptext"
+			else
+				stringsub="$temptext"
+			fi
+		fi
+
+		# Search for "<font size>" and "</font>" that enclose all lines, remove them from the text and add {S:xx} if the subtitle is 1 line or {s:xx} if it's more
+		if [[ $stringsub =~ $regex_tag_font_size ]]; then
+			size=${BASH_REMATCH[8]}
+			temptext=${BASH_REMATCH[1]}${BASH_REMATCH[6]}${BASH_REMATCH[9]}${BASH_REMATCH[10]}
+
+			if [[ $size ]]; then
+				stringsub="{S:$size}$temptext"
+			else
+				stringsub="$temptext"
+			fi
 		fi
 
 		# Merge multiple Y tags
-		if [[ $stringsub =~ $regex_merge_Y_tags ]] && [[ ${BASH_REMATCH[1]} ]]; then
-			stringsub="{Y:${BASH_REMATCH[2]}${BASH_REMATCH[4]}${BASH_REMATCH[6]}${BASH_REMATCH[8]}}${BASH_REMATCH[9]}"
+		if [[ $stringsub =~ $regex_merge_Y_tags ]] && [[ ${BASH_REMATCH[4]} ]]; then
+			stringsub="${BASH_REMATCH[1]}{Y:${BASH_REMATCH[5]}${BASH_REMATCH[7]}${BASH_REMATCH[9]}${BASH_REMATCH[11]}}${BASH_REMATCH[12]}"
 		fi
 
 		# Remove the remaining srt tags
