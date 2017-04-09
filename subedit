@@ -75,6 +75,88 @@ while getopts ":i:s:pna:y:e:E:t:u:U:h" parameter; do
 done
 
 
+### Helper functions
+check_file ()
+{
+	if ! [[ $(file -b "$1") == *"text"* ]]; then
+		echo "Error: \"$1\" is not a text file or it is UTF-16 without BOM"
+		exit 1
+	fi
+}
+
+
+check_srt ()
+{
+	srtok=""
+	for ((i=0; i<=${#arraysrt[@]}; i++)); do
+		if [[ ${arraysrt[$i]} =~ $regextime ]]; then
+			if [[ $2 ]]; then echo $2; fi
+			srtok="true"
+			break
+		fi
+	done
+
+	if ! [[ $srtok ]]; then
+		echo "Error: \"$1\" is not a valid srt file"; exit 1
+	fi
+}
+
+
+check_sub ()
+{
+	subok=""
+	for ((i=0; i<=${#arraysub[@]}; i++)); do
+		line=${arraysub[$i]}
+
+		if ! [[ $line =~ $regexsub1 ]] && [[ $line =~ $regexsub ]]; then
+			if [[ $2 ]]; then echo $2; fi
+			subok="true"
+			break
+		fi
+	done
+
+	if ! [[ $subok ]]; then
+		echo "Error: \"$1\" is not a valid sub file"; exit 1
+	fi
+}
+
+
+check_srt_and_sub ()
+{
+	unix2dos -q "$1" 2> /dev/null
+
+	# Read text file to array
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	encoding=$(file -b --mime-encoding "$1")
+
+	array=()
+	for line in $(iconv -f $encoding -t utf-8 "$1" 2> /dev/null); do
+		array+=($line)
+	done
+
+	IFS=$old_IFS		# restore default field separator
+
+	subtitleis=""
+	for ((i=0; i<=${#array[@]}; i++)); do
+		if ! [[ ${array[$i]} =~ $regexsub1 ]] && [[ ${array[$i]} =~ $regexsub ]]; then
+			if [[ $2 ]]; then echo $2; fi
+			subtitleis="sub"
+			break
+		elif [[ ${array[$i]} =~ $regextime ]]; then
+			if [[ $2 ]]; then echo $2; fi
+			subtitleis="srt"
+			break
+		fi
+	done
+
+	if ! [[ $subtitleis ]]; then
+		echo "Error: \"$1\" is not a valid srt or sub file"; exit 1
+	fi
+}
+
+
 ### Main functions
 shift_time ()
 {
@@ -95,10 +177,11 @@ shift_time ()
 		echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
 	fi
 
-	echo "Shifting time of \"$inputfilename\" by $shifttime..."
-
 	p=$sign$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
 
+
+	# Check if the input file is a text
+	check_file "$inputfilename"
 
 	unix2dos -q "$inputfilename"
 
@@ -111,6 +194,10 @@ shift_time ()
 	done
 
 	IFS=$old_IFS		# restore default field separator
+
+
+	# Check if the srt is OK
+	check_srt "$inputfilename" "Shifting time of \"$inputfilename\" by $shifttime..."
 
 
 	# Process the array
@@ -154,12 +241,8 @@ shift_time ()
 
 change_fps ()
 {
-	if [[ $pal2ntsc ]]; then
-		echo "Changing fps of \"$inputfilename\" from PAL (25) to NTSC (23.976 or 29.970)..."
-	elif [[ $ntsc2pal ]]; then
-		echo "Changing fps of \"$inputfilename\" from NTSC (23.976 or 29.970) to PAL (25)..."
-	fi
-
+	# Check if the input file is a text
+	check_file "$inputfilename"
 
 	unix2dos -q "$inputfilename"
 
@@ -172,6 +255,14 @@ change_fps ()
 	done
 
 	IFS=$old_IFS		# restore default field separator
+
+
+	# Check if the srt is OK
+	if [[ $pal2ntsc ]]; then
+		check_srt "$inputfilename" "Changing fps of \"$inputfilename\" from PAL (25) to NTSC (23.976 or 29.970)..."
+	elif [[ $ntsc2pal ]]; then
+		check_srt "$inputfilename" "Changing fps of \"$inputfilename\" from NTSC (23.976 or 29.970) to PAL (25)..."
+	fi
 
 
 	# Process the array
@@ -243,8 +334,9 @@ adjust_time ()
 		echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
 	fi
 
-	echo "Adjusting time of \"$inputfilename\"..."
 
+	# Check if the input file is a text
+	check_file "$inputfilename"
 
 	unix2dos -q "$inputfilename"
 
@@ -257,6 +349,10 @@ adjust_time ()
 	done
 
 	IFS=$old_IFS		# restore default field separator
+
+
+	# Check if the srt is OK
+	check_srt "$inputfilename" "Adjusting time of \"$inputfilename\"..."
 
 
 	# Find the first and last subtitle time
@@ -356,6 +452,9 @@ adjust_time ()
 
 synchronize_with_file ()
 {
+	# Check if the synchronize file is a text
+	check_file "$synchronizefile"
+
 	# Read file to synchronize to
 	old_IFS=$IFS		# save the field separator
 	IFS=$'\n'			# new field separator, the end of line
@@ -365,6 +464,10 @@ synchronize_with_file ()
 	done
 
 	IFS=$old_IFS		# restore default field separator
+
+
+	# Check if the srt is OK
+	check_srt "$synchronizefile"
 
 
 	# Find the first and last subtitle time of the file to synchronize to
@@ -406,8 +509,9 @@ synchronize_with_file ()
 		echo "Error: The first subtitle cannot start after the last subtitle"; exit 1
 	fi
 
-	echo "Synchronizing \"$inputfilename\" with \"$synchronizefile\"..."
 
+	# Check if the input file is a text
+	check_file "$inputfilename"
 
 	unix2dos -q "$inputfilename"
 
@@ -421,6 +525,10 @@ synchronize_with_file ()
 	done
 
 	IFS=$old_IFS		# restore default field separator
+
+
+	# Check if the srt is OK
+	check_srt "$inputfilename" "Synchronizing \"$inputfilename\" with \"$synchronizefile\"..."
 
 
 	# Find the first and last subtitle time
@@ -501,6 +609,9 @@ synchronize_with_file ()
 
 replace_text ()
 {
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
 	if [[ $replace3 ]]; then
 		replace1=$replace3
 		replace2=$replace4
@@ -517,7 +628,8 @@ replace_text ()
 		echo "Error: You cannot replace this"; exit 1
 	fi
 
-	echo "Replacing \"$replace1\" with \"$replace2\" in file \"$inputfilename\""
+	# Check if the srt or sub is OK
+	check_srt_and_sub "$inputfilename" "Replacing \"$replace1\" with \"$replace2\" in file \"$inputfilename\""
 
 	if [[ $replace3 ]]; then
 		sed -i s"/$replace1/$replace2/g" "$inputfilename"
@@ -542,6 +654,9 @@ sub2_srt ()
 	fi
 
 
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
 	unix2dos -q "$inputfilename"
 
 	# Read text file to array
@@ -556,9 +671,13 @@ sub2_srt ()
 	IFS=$old_IFS		# restore default field separator
 
 
-	arraysrt=()
+	# Check if the sub is OK
+	newfilename="${inputfilename%.*}.srt"
+	check_sub "$inputfilename" "Converting \"$inputfilename\" to \"$newfilename\"..."
+
 
 	# Process the arraysub and at the same time create the arraysrt
+	arraysrt=()
 	linecounter=0
 	IFS=$'|'			# new field separator, the new line character in sub file
 
@@ -595,8 +714,6 @@ sub2_srt ()
 
 	# Write to the txt file the contents of array.
 	if (( ${#arraysrt[@]} > 2 )); then
-		newfilename="${inputfilename%.*}.srt"
-		echo "Converting \"$inputfilename\" to \"$newfilename\"..."
 		printf "%s\n" "${arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
 		echo "Error: Not a valid sub file"; exit 1
@@ -619,6 +736,9 @@ srt2_sub ()
 	fi
 
 
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
 	unix2dos -q "$inputfilename"
 
 	# Read text file to array
@@ -630,6 +750,10 @@ srt2_sub ()
 	for line in $(iconv -f $encoding -t utf-8 "$inputfilename"); do
 		arraysrt+=($line)
 	done
+
+	# Check if the srt is OK
+	newfilename="${inputfilename%.*}.sub"
+	check_srt "$inputfilename" "Converting \"$inputfilename\" to \"$newfilename\"..."
 
 
 	# Remove non necessary lines
@@ -1243,8 +1367,6 @@ srt2_sub ()
 
 	# Write to the txt file the contents of array.
 	if (( ${#arraysub[@]} >= 1 )); then
-		newfilename="${inputfilename%.*}.sub"
-		echo "Converting \"$inputfilename\" to \"$newfilename\"..."
 		printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
 		echo "Error: Not a valid srt file"; exit 1
