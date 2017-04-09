@@ -39,12 +39,12 @@ get_help ()
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:y:e:E:t:u:h" opt); then
+if ( ! getopts ":i:s:pna:y:e:E:t:u:U:h" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:y:e:E:t:u:h" parameter; do
+while getopts ":i:s:pna:y:e:E:t:u:U:h" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
@@ -62,6 +62,7 @@ while getopts ":i:s:pna:y:e:E:t:u:h" parameter; do
 			((OPTIND++)) ;;
 		t) sub2srt=$OPTARG ;;
 		u) srt2sub=$OPTARG ;;
+		U) srt2sub=$OPTARG ; srt2sub_delsrttags="True" ;;
 		h) get_help ;;
 		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
 	esac
@@ -741,6 +742,13 @@ srt2_sub ()
 		# Merge multiple Y tags
 		if [[ $stringsub =~ $regex_merge_Y_tags ]] && [[ ${BASH_REMATCH[1]} ]]; then
 			stringsub="{Y:${BASH_REMATCH[2]}${BASH_REMATCH[4]}${BASH_REMATCH[6]}${BASH_REMATCH[8]}}${BASH_REMATCH[9]}"
+		fi
+
+		# Remove the remaining srt tags
+		if [[ $srt2sub_delsrttags ]]; then
+			while [[ $stringsub =~ $regexremove ]]; do
+				stringsub=${BASH_REMATCH[1]}${BASH_REMATCH[3]}
+			done
 		fi
 
 		arraysub+=($framesub$stringsub)
