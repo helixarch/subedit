@@ -45,12 +45,12 @@ get_help ()
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:y:e:E:t:u:U:h" opt); then
+if ( ! getopts ":i:s:pna:1:2:y:e:E:t:u:U:h" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:y:e:E:t:u:U:h" parameter; do
+while getopts ":i:s:pna:1:2:y:e:E:t:u:U:h" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
@@ -59,6 +59,8 @@ while getopts ":i:s:pna:y:e:E:t:u:U:h" parameter; do
 		a)	eval "adjustfirst=\$$((OPTIND-1))"
 			eval "adjustlast=\$$((OPTIND))"
 			((OPTIND++)) ;;
+		1) adjustonlyfirst=$OPTARG ;;
+		2) adjustonlylast=$OPTARG ;;
 		y) synchronizefile=$OPTARG ;;
 		e)	eval "replace1=\$$((OPTIND-1))"
 			eval "replace2=\$$((OPTIND))"
@@ -387,6 +389,164 @@ adjust_time ()
 
 	# Time in milliseconds of the start time of the last subtitle
 	pb=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
+
+
+	# Calculate the NEW first and last subtitle
+	if [[ $sign ]]; then
+		p=$(($pa $sign $(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))))
+	else
+		p=$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
+	fi
+
+	if [[ $sign_ ]]; then
+		p_=$(($pb $sign_ $(($(($((10#$h_)) * 3600000)) + $(($((10#$m_)) * 60000)) + $(($((10#$s_)) * 1000)) + $((10#$f_))))))
+	else
+		p_=$(($(($((10#$h_)) * 3600000)) + $(($((10#$m_)) * 60000)) + $(($((10#$s_)) * 1000)) + $((10#$f_))))
+	fi
+
+
+	if (( $p >= $p_ )); then
+		echo "Error: The first subtitle cannot start after the last subtitle"; exit 1
+	fi
+
+
+	# Process the array
+	diff1=$(($p_ - $p))
+	diff2=$(($pb - $pa))
+
+	for ((i=0; i<=${#arraysrt[@]}; i++)); do
+		line=${arraysrt[$i]}
+
+		if [[ $line =~ $regextime ]]; then
+			h1="${BASH_REMATCH[1]}"
+			m1="${BASH_REMATCH[2]}"
+			s1="${BASH_REMATCH[3]}"
+			f1="${BASH_REMATCH[4]}"
+
+			h2="${BASH_REMATCH[5]}"
+			m2="${BASH_REMATCH[6]}"
+			s2="${BASH_REMATCH[7]}"
+			f2="${BASH_REMATCH[8]}"
+
+			p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+			p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$f2))))
+
+			p1_new=$(($p + $diff1 * (($p1 - $pa)) / $diff2))
+			p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
+
+			if (( $p1_new < 0 )); then
+				echo "Error: Negative time not allowed. Check the adjusting values."; exit 1
+			fi
+
+			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
+			j2=$(printf "%02d:%02d:%02d,%03d" $(($p2_new / 3600000)) $(($(($p2_new % 3600000)) / 60000)) $(($(($p2_new % 60000)) / 1000)) $(($p2_new % 1000)))
+
+			line_new="$j1 --> $j2"
+
+			arraysrt[$i]=$line_new
+		fi
+	done
+
+	# Write to the txt file the contents of array.
+	printf "%s\n" "${arraysrt[@]}" > "$inputfilename"
+}
+
+
+adjust_time_v2 ()
+{
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
+	unix2dos -q "$inputfilename"
+
+	# Read text file to array
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	for line in $(cat "$inputfilename"); do
+		arraysrt+=($line)
+	done
+
+	IFS=$old_IFS		# restore default field separator
+
+	# Check if the srt is OK
+	check_srt "$inputfilename" "Adjusting time of \"$inputfilename\"..."
+
+
+	# Find the first and last subtitle time
+	for ((i=0; i<=${#arraysrt[@]}; i++)); do
+		line=${arraysrt[$i]}
+
+		if [[ $line =~ $regextime ]]; then
+			h1a="${BASH_REMATCH[1]}"
+			m1a="${BASH_REMATCH[2]}"
+			s1a="${BASH_REMATCH[3]}"
+			f1a="${BASH_REMATCH[4]}"
+
+			break
+		fi
+	done
+
+	for ((i=-1; i>=-${#arraysrt[@]}; i--)); do
+		line=${arraysrt[$i]}
+
+		if [[ $line =~ $regextime ]]; then
+			h1b="${BASH_REMATCH[1]}"
+			m1b="${BASH_REMATCH[2]}"
+			s1b="${BASH_REMATCH[3]}"
+			f1b="${BASH_REMATCH[4]}"
+
+			break
+		fi
+	done
+
+	if (( 10#$m1a >= 60 )) || (( 10#$s1a >= 60 )) || (( 10#$m1b >= 60 )) || (( 10#$s1b >= 60 )); then
+		echo "Error: The first or last subtitle time is invalid."; exit 1
+	fi
+
+	# Time in milliseconds of the start time of the first subtitle
+	pa=$(($(($((10#$h1a)) * 3600000)) + $(($((10#$m1a)) * 60000)) + $(($((10#$s1a)) * 1000)) + $((10#$f1a))))
+
+	# Time in milliseconds of the start time of the last subtitle
+	pb=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
+
+
+	# Calculate the time to move the subs
+	regexadjust="^([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
+
+	if ! [[ $adjustonlyfirst ]]; then
+		h=$h1a
+		m=$m1a
+		s=$s1a
+		f=$f1a
+	elif [[ $adjustonlyfirst =~ $regexadjust ]]; then
+		sign="${BASH_REMATCH[1]}"
+		h="${BASH_REMATCH[2]}"
+		m="${BASH_REMATCH[3]}"
+		s="${BASH_REMATCH[4]}"
+		f="${BASH_REMATCH[5]}"
+	else
+		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff'"; exit 1
+	fi
+
+	if ! [[ $adjustonlylast ]]; then
+		h_=$h1b
+		m_=$m1b
+		s_=$s1b
+		f_=$f1b
+	elif [[ $adjustonlylast =~ $regexadjust ]]; then
+		sign_="${BASH_REMATCH[1]}"
+		h_="${BASH_REMATCH[2]}"
+		m_="${BASH_REMATCH[3]}"
+		s_="${BASH_REMATCH[4]}"
+		f_="${BASH_REMATCH[5]}"
+	else
+		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff'"; exit 1
+	fi
+
+	if (( 10#$m >= 60 )) || (( 10#$s >= 60 )) || (( 10#$m_ >= 60 )) || (( 10#$s_ >= 60 )); then
+		echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+	fi
 
 
 	# Calculate the NEW first and last subtitle
@@ -1384,6 +1544,10 @@ if [[ $inputfilename ]]; then
 		change_fps
 	elif [[ $adjustfirst ]]; then
 		adjust_time
+	elif [[ $adjustonlyfirst ]]; then
+		adjust_time_v2
+	elif [[ $adjustonlylast ]]; then
+		adjust_time_v2
 	elif [[ $synchronizefile ]]; then
 		synchronize_with_file
 	elif [[ $replace1 ]]; then
