@@ -223,7 +223,7 @@ shift_time ()
 			p1_new=$(($p1 + $p))
 			p2_new=$(($p2 + $p))
 
-			if (( $p1_new < 0 )); then
+			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
 				echo "Error: Negative time not allowed. Check the shifting value."; exit 1
 			fi
 
@@ -434,7 +434,7 @@ adjust_time ()
 			p1_new=$(($p + $diff1 * (($p1 - $pa)) / $diff2))
 			p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
-			if (( $p1_new < 0 )); then
+			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
 				echo "Error: Negative time not allowed. Check the adjusting values."; exit 1
 			fi
 
@@ -592,7 +592,7 @@ adjust_time_v2 ()
 			p1_new=$(($p + $diff1 * (($p1 - $pa)) / $diff2))
 			p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
-			if (( $p1_new < 0 )); then
+			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
 				echo "Error: Negative time not allowed. Check the adjusting values."; exit 1
 			fi
 
@@ -749,7 +749,7 @@ synchronize_with_file ()
 			p1_new=$(($p + $diff1 * (($p1 - $pa)) / $diff2))
 			p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
-			if (( $p1_new < 0 )); then
+			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
 				echo "Error: Negative time not allowed. Check the adjusting values."; exit 1
 			fi
 
