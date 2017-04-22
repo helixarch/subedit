@@ -405,7 +405,15 @@ adjust_time ()
 	fi
 
 
-	if (( $p >= $p_ )); then
+	if (( $pa == $pb )); then
+		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; exit 1
+	elif (( $pa > $pb )); then
+		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; exit 1
+	fi
+
+	if (( $p == $p_ )); then
+		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; exit 1
+	elif (( $p > $p_ )); then
 		echo "Error: The first subtitle cannot start after the last subtitle"; exit 1
 	fi
 
@@ -563,7 +571,15 @@ adjust_time_v2 ()
 	fi
 
 
-	if (( $p >= $p_ )); then
+	if (( $pa == $pb )); then
+		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; exit 1
+	elif (( $pa > $pb )); then
+		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; exit 1
+	fi
+
+	if (( $p == $p_ )); then
+		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; exit 1
+	elif (( $p > $p_ )); then
 		echo "Error: The first subtitle cannot start after the last subtitle"; exit 1
 	fi
 
@@ -665,7 +681,9 @@ synchronize_with_file ()
 	p=$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
 	p_=$(($(($((10#$h_)) * 3600000)) + $(($((10#$m_)) * 60000)) + $(($((10#$s_)) * 1000)) + $((10#$f_))))
 
-	if (( $p >= $p_ )); then
+	if (( $p == $p_ )); then
+		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; exit 1
+	elif (( $p > $p_ )); then
 		echo "Error: The first subtitle cannot start after the last subtitle"; exit 1
 	fi
 
@@ -723,6 +741,12 @@ synchronize_with_file ()
 
 	# Time in milliseconds of the start time of the last subtitle
 	pb=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
+
+	if (( $pa == $pb )); then
+		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; exit 1
+	elif (( $pa > $pb )); then
+		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; exit 1
+	fi
 
 
 	# Process the array
