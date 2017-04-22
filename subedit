@@ -310,7 +310,7 @@ change_fps ()
 adjust_time ()
 {
 	# Calculate the time to move the subs
-	regexadjust="^([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
+	regexadjust="^([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$"
 
 	if [[ $adjustfirst =~ $regexadjust ]]; then
 		sign="${BASH_REMATCH[1]}"
@@ -520,7 +520,7 @@ adjust_time_v2 ()
 
 
 	# Calculate the time to move the subs
-	regexadjust="^([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
+	regexadjust="^([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$"
 
 	if ! [[ $adjustonlyfirst ]]; then
 		h=$h1a
