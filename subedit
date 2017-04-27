@@ -163,7 +163,7 @@ check_srt_and_sub ()
 shift_time ()
 {
 	# Calculate the time to move the subs
-	regexshift="^([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$"
+	regexshift="^([az+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$"
 
 	if [[ $shifttime =~ $regexshift ]]; then
 		sign="${BASH_REMATCH[1]}"
@@ -172,14 +172,14 @@ shift_time ()
 		s="${BASH_REMATCH[4]}"
 		f="${BASH_REMATCH[5]}"
 	else
-		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff'"; exit 1
+		echo "Error: Syntax must be like '(+/-/a/z)hh:mm:ss,fff'"; exit 1
 	fi
 
 	if (( 10#$m >= 60 )) || (( 10#$s >= 60 )); then
 		echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
 	fi
 
-	p=$sign$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
+	givenms=$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
 
 
 	# Check if the input file is a text
@@ -200,6 +200,53 @@ shift_time ()
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Shifting time of \"$inputfilename\" by $shifttime..."
+
+
+	# Find shift milliseconds
+	if [[ $sign == "a" ]]; then
+		# Find the first subtitle time
+		for ((i=0; i<=${#arraysrt[@]}; i++)); do
+			line=${arraysrt[$i]}
+
+			if [[ $line =~ $regextime ]]; then
+				h1a="${BASH_REMATCH[1]}"
+				m1a="${BASH_REMATCH[2]}"
+				s1a="${BASH_REMATCH[3]}"
+				f1a="${BASH_REMATCH[4]}"
+
+				break
+			fi
+		done
+
+		# Time in milliseconds of the start time of the first subtitle
+		pa=$(($(($((10#$h1a)) * 3600000)) + $(($((10#$m1a)) * 60000)) + $(($((10#$s1a)) * 1000)) + $((10#$f1a))))
+
+		# Shift milliseconds
+		((p=givenms-pa))
+	elif [[ $sign == "z" ]]; then
+		# Find the last subtitle time
+		for ((i=-1; i>=-${#arraysrt[@]}; i--)); do
+			line=${arraysrt[$i]}
+
+			if [[ $line =~ $regextime ]]; then
+				h1b="${BASH_REMATCH[1]}"
+				m1b="${BASH_REMATCH[2]}"
+				s1b="${BASH_REMATCH[3]}"
+				f1b="${BASH_REMATCH[4]}"
+
+				break
+			fi
+		done
+
+		# Time in milliseconds of the start time of the last subtitle
+		pb=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
+
+		# Shift milliseconds
+		((p=givenms-pb))
+	else
+		# Shift milliseconds
+		p=$sign$givenms
+	fi
 
 
 	# Process the array
