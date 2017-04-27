@@ -45,12 +45,12 @@ get_help ()
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:h" opt); then
+if ( ! getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:h" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:h" parameter; do
+while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:h" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
@@ -72,6 +72,8 @@ while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:h" parameter; do
 		t) sub2srt=$OPTARG ;;
 		u) srt2sub=$OPTARG ;;
 		U) srt2sub=$OPTARG ; srt2sub_delsrttags="True" ;;
+		j) joinsrt=$OPTARG ;;
+		J) jointime=$OPTARG ;;
 		h) get_help ;;
 		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
 	esac
@@ -1649,6 +1651,191 @@ srt2_sub ()
 }
 
 
+join_srt ()
+{
+	if [[ "${inputfilename##*.}" != "srt" ]]; then
+		echo "Warning: \"$inputfilename\" does not have '.srt' extension"
+	fi
+
+	if [[ "${joinsrt##*.}" != "srt" ]]; then
+		echo "Warning: \"$joinsrt\" does not have '.srt' extension"
+	fi
+
+	# Check if the input file is a text
+	check_file "$inputfilename"
+	check_file "$joinsrt"
+
+	unix2dos -q "$inputfilename"
+	unix2dos -q "$joinsrt"
+
+	# Read text files to array
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	for line in $(cat "$inputfilename"); do
+		arraysrt+=($line)
+	done
+
+	for line in $(cat "$joinsrt"); do
+		arraysrtjoin+=($line)
+	done
+
+	IFS=$old_IFS		# restore default field separator
+
+
+	# Check if the srt are OK
+	check_srt "$inputfilename"
+
+	for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
+		if [[ ${arraysrtjoin[$i]} =~ $regextime ]]; then
+			srtok="true"
+			break
+		fi
+	done
+
+	if ! [[ $srtok ]]; then
+		echo "Error: \"$joinsrt\" is not a valid srt file"; exit 1
+	fi
+
+
+	# Re-create the first subtitle array with new counter
+	subcounter=0
+	for ((i=0; i<=${#arraysrt[@]}; i++)); do
+		if [[ ${arraysrt[((i+1))]} =~ $regextime ]] && [[ ${arraysrt[$i]} =~ ^([0-9]+) ]]; then
+			((subcounter++))
+			arraysrt[$i]="$subcounter"
+		fi
+	done
+
+	# Remove empty lines at the end
+	while :; do
+		if (( ${#arraysrt[-1]} == 1 )); then
+			unset arraysrt[-1]
+		else
+			break
+		fi
+	done
+
+	# Add an empty line
+	arraysrt+=("")
+
+	if ! [[ $jointime ]]; then
+		echo "Joining \"$inputfilename\" with \"$joinsrt\"..."
+		# Re-create the second subtitle array with new counter
+		for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
+			if [[ ${arraysrtjoin[$((i+1))]} =~ $regextime ]] && [[ ${arraysrtjoin[$i]} =~ ^([0-9]+) ]]; then
+				((subcounter++))
+				arraysrtjoin[$i]="$subcounter"
+			fi
+		done
+	else
+		# Calculate the time of the end time of the last subtitle of the first file
+		for ((i=-1; i>=-${#arraysrt[@]}; i--)); do
+			line=${arraysrt[$i]}
+
+			if [[ $line =~ $regextime ]]; then
+				h2b="${BASH_REMATCH[5]}"
+				m2b="${BASH_REMATCH[6]}"
+				s2b="${BASH_REMATCH[7]}"
+				f2b="${BASH_REMATCH[8]}"
+
+				break
+			fi
+		done
+
+		# Time in milliseconds of the end time of the last subtitle of the first file
+		p2b=$(($(($((10#$h2b)) * 3600000)) + $(($((10#$m2b)) * 60000)) + $(($((10#$s2b)) * 1000)) + $((10#$f2b))))
+
+
+		# Calculate the time to shift the second subtitle
+		regexjoin="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$"
+
+		if [[ $jointime =~ $regexjoin ]]; then
+			h="${BASH_REMATCH[1]}"
+			m="${BASH_REMATCH[2]}"
+			s="${BASH_REMATCH[3]}"
+			f="${BASH_REMATCH[4]}"
+		else
+			echo "Error: Syntax must be like 'hh:mm:ss,fff'"; exit 1
+		fi
+
+		if (( 10#$m >= 60 )) || (( 10#$s >= 60 )); then
+			echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+		fi
+
+		# Time in milliseconds of jointime
+		p=$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
+
+
+		# Compare jointime with the end time of the last subtitle of the first file
+		if ((p < p2b)); then
+			echo "Error: The duration of the first video (-J parameter) cannot be less than the first subtitle"; exit 1
+		else
+			echo "Joining \"$inputfilename\" with \"$joinsrt\"..."
+		fi
+
+
+		# Process the array of the second subtitle
+		for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
+			line=${arraysrtjoin[$i]}
+
+			if [[ $line =~ $regextime ]]; then
+				h1="${BASH_REMATCH[1]}"
+				m1="${BASH_REMATCH[2]}"
+				s1="${BASH_REMATCH[3]}"
+				f1="${BASH_REMATCH[4]}"
+
+				h2="${BASH_REMATCH[5]}"
+				m2="${BASH_REMATCH[6]}"
+				s2="${BASH_REMATCH[7]}"
+				f2="${BASH_REMATCH[8]}"
+
+				p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+				p2=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$f2))))
+
+				p1_new=$(($p1 + $p))
+				p2_new=$(($p2 + $p))
+
+				j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
+				j2=$(printf "%02d:%02d:%02d,%03d" $(($p2_new / 3600000)) $(($(($p2_new % 3600000)) / 60000)) $(($(($p2_new % 60000)) / 1000)) $(($p2_new % 1000)))
+
+				line_new="$j1 --> $j2"
+
+				arraysrtjoin[$i]=$line_new
+			fi
+		done
+
+		# Re-create the second subtitle array with new counter
+		for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
+			if [[ ${arraysrtjoin[$((i+1))]} =~ $regextime ]] && [[ ${arraysrtjoin[$i]} =~ ^([0-9]+) ]]; then
+				((subcounter++))
+				arraysrtjoin[$i]="$subcounter"
+			fi
+		done
+	fi
+
+
+	# Add the second array to the first
+	arraysrt+=("${arraysrtjoin[@]}")
+
+	# Remove empty lines at the end. Again
+	while :; do
+		if (( ${#arraysrt[-1]} == 1 )); then
+			unset arraysrt[-1]
+		else
+			break
+		fi
+	done
+
+	# Write to the txt file the contents of array.
+	basename=${inputfilename%.*}
+	j="_join.srt"
+	printf "%s\n" "${arraysrt[@]}" > "$basename$j"
+
+	unix2dos -q "$basename$j"
+}
+
+
 if [[ $inputfilename ]]; then
 	if [[ $shifttime ]]; then
 		shift_time
@@ -1672,6 +1859,8 @@ if [[ $inputfilename ]]; then
 		sub2_srt
 	elif [[ $srt2sub ]]; then
 		srt2_sub
+	elif [[ $joinsrt ]]; then
+		join_srt
 	fi
 	exit 0
 fi
