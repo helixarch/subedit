@@ -956,6 +956,7 @@ sub2_srt ()
 	arraysrt=()
 	linecounter=0
 	IFS=$'|'			# new field separator, the new line character in sub file
+	regexubis="^(\{(y|Y):[ubis]+\}){1}(\{(y|Y):[ubis]+\})?(\{(y|Y):[ubis]+\})?(\{(y|Y):[ubis]+\})?(.+)$"
 
 	for ((i=0; i<=${#arraysub[@]}-1; i++)); do
 		line=${arraysub[$i]}
@@ -972,6 +973,55 @@ sub2_srt ()
 			j2=$(printf "%02d:%02d:%02d,%03d" $(($p2 / 3600000)) $(($(($p2 % 3600000)) / 60000)) $(($(($p2 % 60000)) / 1000)) $(($p2 % 1000)))
 
 			read -r -a arraysubs <<< "$subs"
+
+			for ((j=0; j<=${#arraysubs[@]}-1; j++)); do
+				text=${arraysubs[$j]}
+
+				if [[ $text =~ $regexubis ]]; then
+					ubis1="${BASH_REMATCH[1]}"
+					y1="${BASH_REMATCH[2]}"
+					ubis2="${BASH_REMATCH[3]}"
+					y2="${BASH_REMATCH[4]}"
+					ubis3="${BASH_REMATCH[5]}"
+					y3="${BASH_REMATCH[6]}"
+					ubis4="${BASH_REMATCH[7]}"
+					y4="${BASH_REMATCH[8]}"
+					justtext="${BASH_REMATCH[9]}"
+
+					YYY=""
+					yyy=""
+
+					if [[ $y1 == "Y" ]]; then YYY+=$ubis1; fi
+					if [[ $y2 == "Y" ]]; then YYY+=$ubis2; fi
+					if [[ $y3 == "Y" ]]; then YYY+=$ubis3; fi
+					if [[ $y4 == "Y" ]]; then YYY+=$ubis4; fi
+
+					if [[ $y1 == "y" ]]; then yyy+=$ubis1; fi
+					if [[ $y2 == "y" ]]; then yyy+=$ubis2; fi
+					if [[ $y3 == "y" ]]; then yyy+=$ubis3; fi
+					if [[ $y4 == "y" ]]; then yyy+=$ubis4; fi
+
+					suffix=""
+					case ${YYY,,} in
+						*"s"*) justtext="<s>"$justtext; arraysubs[$j]=$justtext; suffix+="</s>" ;;&
+						*"u"*) justtext="<u>"$justtext; arraysubs[$j]=$justtext; suffix+="</u>" ;;&
+						*"b"*) justtext="<b>"$justtext; arraysubs[$j]=$justtext; suffix+="</b>" ;;&
+						*"i"*) justtext="<i>"$justtext; arraysubs[$j]=$justtext; suffix+="</i>" ;;
+					esac
+					arraysubs[-1]+=$suffix
+					if ((${#arraysubs[@]} == 1)); then
+						justtext+=$suffix
+					fi
+					suffix=""
+
+					case ${yyy,,} in
+						*"s"*) justtext="<s>"$justtext"</s>"; arraysubs[$j]=$justtext ;;&
+						*"u"*) justtext="<u>"$justtext"</u>"; arraysubs[$j]=$justtext ;;&
+						*"b"*) justtext="<b>"$justtext"</b>"; arraysubs[$j]=$justtext ;;&
+						*"i"*) justtext="<i>"$justtext"</i>"; arraysubs[$j]=$justtext ;;
+					esac
+				fi
+			done
 
 			((linecounter++))
 			arraysrt+=("$linecounter")
