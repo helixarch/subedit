@@ -1047,6 +1047,108 @@ sub2_srt ()
 						*"b"*) justtext="<b>"$justtext"</b>"; arraysubs[$j]=$justtext ;;&
 						*"i"*) justtext="<i>"$justtext"</i>"; arraysubs[$j]=$justtext ;;
 					esac
+
+					# COLOR is the tag that affect all lines and color the tag that affect only one line.
+					COLOR=""
+					color=""
+
+					if [[ $tag1 == "C" ]]; then COLOR=$tagvalue1; fi
+					if [[ $tag2 == "C" ]]; then COLOR=$tagvalue2; fi
+					if [[ $tag3 == "C" ]]; then COLOR=$tagvalue3; fi
+					if [[ $tag4 == "C" ]]; then COLOR=$tagvalue4; fi
+					if [[ $tag5 == "C" ]]; then COLOR=$tagvalue5; fi
+					if [[ $tag6 == "C" ]]; then COLOR=$tagvalue6; fi
+					if [[ $tag7 == "C" ]]; then COLOR=$tagvalue7; fi
+					if [[ $tag8 == "C" ]]; then COLOR=$tagvalue8; fi
+
+					if [[ $tag1 == "c" ]]; then color=$tagvalue1; fi
+					if [[ $tag2 == "c" ]]; then color=$tagvalue2; fi
+					if [[ $tag3 == "c" ]]; then color=$tagvalue3; fi
+					if [[ $tag4 == "c" ]]; then color=$tagvalue4; fi
+					if [[ $tag5 == "c" ]]; then color=$tagvalue5; fi
+					if [[ $tag6 == "c" ]]; then color=$tagvalue6; fi
+					if [[ $tag7 == "c" ]]; then color=$tagvalue7; fi
+					if [[ $tag8 == "c" ]]; then color=$tagvalue8; fi
+
+
+					regexsubcolor="[$]([a-fA-F0-9]{2})([a-fA-F0-9]{2})([a-fA-F0-9]{2})"
+					if [[ $COLOR =~ $regexsubcolor ]]; then
+						COLOR="\"#${BASH_REMATCH[3]}${BASH_REMATCH[2]}${BASH_REMATCH[1]}\""
+						COLOR=${COLOR,,}
+					else
+						COLOR=""
+					fi
+
+					if [[ $color =~ $regexsubcolor ]]; then
+						color="\"#${BASH_REMATCH[3]}${BASH_REMATCH[2]}${BASH_REMATCH[1]}\""
+						color=${color,,}
+					else
+						color=""
+					fi
+
+					# SIZE is the tag that affect all lines and size the tag that affect only one line.
+					SIZE=""
+					size=""
+
+					if [[ $tag1 == "S" ]]; then SIZE=$tagvalue1; fi
+					if [[ $tag2 == "S" ]]; then SIZE=$tagvalue2; fi
+					if [[ $tag3 == "S" ]]; then SIZE=$tagvalue3; fi
+					if [[ $tag4 == "S" ]]; then SIZE=$tagvalue4; fi
+					if [[ $tag5 == "S" ]]; then SIZE=$tagvalue5; fi
+					if [[ $tag6 == "S" ]]; then SIZE=$tagvalue6; fi
+					if [[ $tag7 == "S" ]]; then SIZE=$tagvalue7; fi
+					if [[ $tag8 == "S" ]]; then SIZE=$tagvalue8; fi
+
+					if [[ $tag1 == "s" ]]; then size=$tagvalue1; fi
+					if [[ $tag2 == "s" ]]; then size=$tagvalue2; fi
+					if [[ $tag3 == "s" ]]; then size=$tagvalue3; fi
+					if [[ $tag4 == "s" ]]; then size=$tagvalue4; fi
+					if [[ $tag5 == "s" ]]; then size=$tagvalue5; fi
+					if [[ $tag6 == "s" ]]; then size=$tagvalue6; fi
+					if [[ $tag7 == "s" ]]; then size=$tagvalue7; fi
+					if [[ $tag8 == "s" ]]; then size=$tagvalue8; fi
+
+					regexsubsize="([0-9]+)"
+					if [[ $SIZE =~ $regexsubsize ]]; then
+						SIZE="\"${BASH_REMATCH[1]}\""
+					else
+						SIZE=""
+					fi
+
+					if [[ $size =~ $regexsubsize ]]; then
+						size="\"${BASH_REMATCH[1]}\""
+					else
+						size=""
+					fi
+
+
+					if [[ $COLOR ]] && [[ $SIZE ]] ; then
+						justtext="<font color=$COLOR size=$SIZE>"$justtext
+						arraysubs[$j]=$justtext
+						suffix+="</font>"
+						arraysubs[-1]+=$suffix
+					elif [[ $COLOR ]]; then
+						justtext="<font color=$COLOR>"$justtext
+						arraysubs[$j]=$justtext
+						suffix+="</font>"
+						arraysubs[-1]+=$suffix
+					elif [[ $SIZE ]] ; then
+						justtext="<font size=$SIZE>"$justtext
+						arraysubs[$j]=$justtext
+						suffix+="</font>"
+						arraysubs[-1]+=$suffix
+					fi
+
+					if [[ $color ]] && [[ $size ]] ; then
+						justtext="<font color=$color size=$size>"$justtext"</font>"
+						arraysubs[$j]=$justtext
+					elif [[ $color ]]; then
+						justtext="<font color=$color>"$justtext"</font>"
+						arraysubs[$j]=$justtext
+					elif [[ $size ]] ; then
+						justtext="<font size=$size>"$justtext"</font>"
+						arraysubs[$j]=$justtext
+					fi
 				fi
 			done
 
