@@ -45,12 +45,12 @@ get_help ()
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:h" opt); then
+if ( ! getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:Xh" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:h" parameter; do
+while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:Xh" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
@@ -74,6 +74,8 @@ while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:h" parameter; do
 		U) srt2sub=$OPTARG ; srt2sub_delsrttags="True" ;;
 		j) joinsrt=$OPTARG ;;
 		J) jointime=$OPTARG ;;
+		x) splitsrt=$OPTARG ;;
+		X) splittime="True" ;;
 		h) get_help ;;
 		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
 	esac
@@ -2015,6 +2017,332 @@ join_srt ()
 }
 
 
+split_srt ()
+{
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
+	unix2dos -q "$inputfilename"
+
+	# Read text file to array
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	for line in $(cat "$inputfilename"); do
+		arraysrt+=($line)
+	done
+
+	IFS=$old_IFS		# restore default field separator
+
+	# Check if the srt is OK
+	check_srt "$inputfilename" "Splitting \"$inputfilename\"..."
+
+
+	# Find the first and last subtitle time
+	for ((i=0; i<=${#arraysrt[@]}; i++)); do
+		line=${arraysrt[$i]}
+
+		if [[ $line =~ $regextime ]]; then
+			h1a="${BASH_REMATCH[1]}"
+			m1a="${BASH_REMATCH[2]}"
+			s1a="${BASH_REMATCH[3]}"
+			f1a="${BASH_REMATCH[4]}"
+
+			break
+		fi
+	done
+
+	for ((i=-1; i>=-${#arraysrt[@]}; i--)); do
+		line=${arraysrt[$i]}
+
+		if [[ $line =~ $regextime ]]; then
+			h1b="${BASH_REMATCH[1]}"
+			m1b="${BASH_REMATCH[2]}"
+			s1b="${BASH_REMATCH[3]}"
+			f1b="${BASH_REMATCH[4]}"
+
+			break
+		fi
+	done
+
+	# Time in milliseconds of the start time of the first subtitle
+	p1a=$(($(($((10#$h1a)) * 3600000)) + $(($((10#$m1a)) * 60000)) + $(($((10#$s1a)) * 1000)) + $((10#$f1a))))
+
+	# Time in milliseconds of the start time of the last subtitle
+	p1b=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
+
+
+	# Initialize the variables
+	splitsubfound=""
+	split2counter=0
+	arraysrtsplit1=()
+	arraysrtsplit2=()
+
+	# Calculate the time to split the subtitle
+	regexsplit1="^([+-]?)([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$"
+	regexsplit2="^([+-]?)([0-9]+)$"
+	regexsplit3="^([+-]?)([0-9]+)[:]([0-9]+)[t]$"
+	regexsplit4="^([+-]?)([0-9]+)[:]([0-9]+)[n]$"
+
+	if [[ $splitsrt =~ $regexsplit1 ]]; then
+		sign="${BASH_REMATCH[1]}"
+		h="${BASH_REMATCH[2]}"
+		m="${BASH_REMATCH[3]}"
+		s="${BASH_REMATCH[4]}"
+		f="${BASH_REMATCH[5]}"
+
+		if (( 10#$m >= 60 )) || (( 10#$s >= 60 )); then
+			echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+		fi
+
+		# Time in milliseconds to split the subtitle
+		p=$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
+		if [[ $sign == "-" ]]; then
+			p=$(($p1b - $p))
+		fi
+
+		if ((p < p1a)); then
+			echo "Error: Split time cannot precede the start time of the first subtitle."; exit 1
+		fi
+
+		if ((p > p1b)); then
+			echo "Error: Split time cannot exceed the start time of the last subtitle."; exit 1
+		fi
+
+		# Find the subtitle to make the split
+		for ((i=0; i<=${#arraysrt[@]}-1; i++)); do
+			line=${arraysrt[$i]}
+			nextline=${arraysrt[((i+1))]}
+
+			if ! [[ $splitsubfound ]] && [[ $nextline =~ $regextime ]]; then
+				h1="${BASH_REMATCH[1]}"
+				m1="${BASH_REMATCH[2]}"
+				s1="${BASH_REMATCH[3]}"
+				f1="${BASH_REMATCH[4]}"
+
+				p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+
+				if ((p1 >= p)); then
+					splitsubfound="True"
+				fi
+			fi
+
+			if ! [[ $splitsubfound ]]; then
+				arraysrtsplit1[$i]=$line
+			else
+				arraysrtsplit2[$split2counter]=$line
+				((split2counter++))
+			fi
+		done
+	elif [[ $splitsrt =~ $regexsplit2 ]]; then
+		sign="${BASH_REMATCH[1]}"
+		splitinteger="${BASH_REMATCH[2]}"
+
+		# Re-create the subtitle array with new counter
+		for ((i=0; i<=${#arraysrt[@]}; i++)); do
+			if [[ ${arraysrt[((i+1))]} =~ $regextime ]] && [[ ${arraysrt[$i]} =~ ^([0-9]+) ]]; then
+				((subcounter++))
+				arraysrt[$i]="$subcounter"
+			fi
+		done
+
+		if [[ $sign == "-" ]]; then
+			splitinteger=$(($subcounter - $splitinteger))
+		fi
+
+		# Check if the given integer is OK
+		if ((splitinteger == 0)) || ((splitinteger > ((subcounter-1)))); then
+			echo "Error: The number of subtitles in the file are $subcounter. The given integer must be between or equal to 1 and $((subcounter-1))."; exit 1
+		fi
+
+		# Create the two new subtitle arrays
+		for ((i=0; i<=${#arraysrt[@]}-1; i++)); do
+			line=${arraysrt[$i]}
+			nextline=${arraysrt[((i+1))]}
+
+			if ! [[ $splitsubfound ]] && [[ $nextline =~ $regextime ]] && [[ $line =~ ^([0-9]+) ]]; then
+				if ((line > splitinteger)); then
+					splitsubfound="True"
+				fi
+			fi
+
+			if ! [[ $splitsubfound ]]; then
+				arraysrtsplit1[$i]=$line
+			else
+				arraysrtsplit2[$split2counter]=$line
+				((split2counter++))
+			fi
+		done
+	elif [[ $splitsrt =~ $regexsplit3 ]]; then
+		sign="${BASH_REMATCH[1]}"
+		numerator="${BASH_REMATCH[2]}"
+		denominator="${BASH_REMATCH[3]}"
+
+		if ((numerator == 0)) || ((denominator == 0)) || ((numerator >= denominator)); then
+			echo "Error: The numerator must be less than the denominator and both must not be 0."; exit 1
+		fi
+
+		# Time in milliseconds to split the subtitle
+		if [[ $sign == "-" ]]; then
+			p=$((p1b*((denominator - numerator))/denominator))
+		else
+			p=$((p1b*numerator/denominator))
+		fi
+
+		if ((p < p1a)); then
+			echo "Error: Split time cannot precede the start time of the first subtitle."; exit 1
+		fi
+
+		# Find the subtitle to make the split
+		for ((i=0; i<=${#arraysrt[@]}-1; i++)); do
+			line=${arraysrt[$i]}
+			nextline=${arraysrt[((i+1))]}
+
+			if ! [[ $splitsubfound ]] && [[ $nextline =~ $regextime ]]; then
+				h1="${BASH_REMATCH[1]}"
+				m1="${BASH_REMATCH[2]}"
+				s1="${BASH_REMATCH[3]}"
+				f1="${BASH_REMATCH[4]}"
+
+				p1=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+
+				if ((p1 >= p)); then
+					splitsubfound="True"
+				fi
+			fi
+
+			if ! [[ $splitsubfound ]]; then
+				arraysrtsplit1[$i]=$line
+			else
+				arraysrtsplit2[$split2counter]=$line
+				((split2counter++))
+			fi
+		done
+	elif [[ $splitsrt =~ $regexsplit4 ]]; then
+		sign="${BASH_REMATCH[1]}"
+		numerator="${BASH_REMATCH[2]}"
+		denominator="${BASH_REMATCH[3]}"
+
+		if ((numerator == 0)) || ((denominator == 0)) || ((numerator >= denominator)); then
+			echo "Error: The numerator must be less than the denominator and both must not be 0."; exit 1
+		fi
+
+		# Re-create the subtitle array with new counter
+		for ((i=0; i<=${#arraysrt[@]}; i++)); do
+			if [[ ${arraysrt[((i+1))]} =~ $regextime ]] && [[ ${arraysrt[$i]} =~ ^([0-9]+) ]]; then
+				((subcounter++))
+				arraysrt[$i]="$subcounter"
+			fi
+		done
+
+		if [[ $sign == "-" ]]; then
+			if ((subcounter%2 == 1)) && ((denominator/numerator == 2)); then
+				splitinteger=$((1 + subcounter*((denominator - numerator))/denominator))
+			else
+				splitinteger=$((subcounter*((denominator - numerator))/denominator))
+			fi
+		else
+			if ((subcounter%2 == 1)) && ((denominator/numerator == 2)); then
+				splitinteger=$((1 + subcounter*numerator/denominator))
+			else
+				splitinteger=$((subcounter*numerator/denominator))
+			fi
+		fi
+
+		# Check if the integer is OK
+		if ((splitinteger == 0)); then
+			echo "Error: The fraction is too small. Exiting..."; exit 1
+		fi
+
+		# Create the two new subtitle arrays
+		for ((i=0; i<=${#arraysrt[@]}-1; i++)); do
+			line=${arraysrt[$i]}
+			nextline=${arraysrt[((i+1))]}
+
+			if ! [[ $splitsubfound ]] && [[ $nextline =~ $regextime ]] && [[ $line =~ ^([0-9]+) ]]; then
+				if ((line > splitinteger)); then
+					splitsubfound="True"
+				fi
+			fi
+
+			if ! [[ $splitsubfound ]]; then
+				arraysrtsplit1[$i]=$line
+			else
+				arraysrtsplit2[$split2counter]=$line
+				((split2counter++))
+			fi
+		done
+	else
+		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff' or '(+/-)SUB_INTEGER' or '(+/-)INTEGER:INTEGERt' or '(+/-)INTEGER:INTEGERn'"; exit 1
+	fi
+
+
+	# Re-create the second subtitle array with new counter
+	subcounter=0
+	for ((i=0; i<=${#arraysrtsplit2[@]}-1; i++)); do
+		if [[ ${arraysrtsplit2[((i+1))]} =~ $regextime ]] && [[ ${arraysrtsplit2[$i]} =~ ^([0-9]+) ]]; then
+			((subcounter++))
+			arraysrtsplit2[$i]="$subcounter"
+		fi
+	done
+
+	# Remove empty lines at the end
+	while :; do
+		if (( ${#arraysrtsplit1[-1]} == 1 )); then
+			unset arraysrtsplit1[-1]
+		else
+			break
+		fi
+	done
+
+	if (( ${#arraysrtsplit2[-1]} == 0 )); then
+		unset arraysrtsplit2[-1]
+	fi
+
+	while :; do
+		if (( ${#arraysrtsplit2[-1]} == 1 )); then
+			unset arraysrtsplit2[-1]
+		else
+			break
+		fi
+	done
+
+	# Write to the txt file the contents of the two arrays.
+	basename=${inputfilename%.*}
+	firstfile="_1.srt"
+	secondfile="_2.srt"
+	printf "%s\n" "${arraysrtsplit1[@]}" > "$basename$firstfile"
+	printf "%s\n" "${arraysrtsplit2[@]}" > "$basename$secondfile"
+
+	unix2dos -q "$basename$firstfile"
+	unix2dos -q "$basename$secondfile"
+
+
+	# If -X (splittime) exists:
+	unset arraysrt
+	if [[ $splittime ]]; then
+		# Find the first subtitle time of the second file
+		for ((i=0; i<=${#arraysrtsplit2[@]}; i++)); do
+			line=${arraysrtsplit2[$i]}
+
+			if [[ $line =~ $regextime ]]; then
+				h1a="${BASH_REMATCH[1]}"
+				m1a="${BASH_REMATCH[2]}"
+				s1a="${BASH_REMATCH[3]}"
+				f1a="${BASH_REMATCH[4]}"
+
+				break
+			fi
+		done
+
+	shifttime="-$h1a:$m1a:$s1a,$f1a"
+	inputfilename="$basename$secondfile"
+	shift_time
+	unset shifttime
+	fi
+}
+
+
 if [[ $inputfilename ]]; then
 	if [[ $shifttime ]]; then
 		shift_time
@@ -2040,6 +2368,8 @@ if [[ $inputfilename ]]; then
 		srt2_sub
 	elif [[ $joinsrt ]]; then
 		join_srt
+	elif [[ $splitsrt ]]; then
+		split_srt
 	fi
 	exit 0
 fi
