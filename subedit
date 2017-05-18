@@ -85,6 +85,16 @@ done
 ### Helper functions
 check_file ()
 {
+	if ! [[ -f "$1" ]]; then
+		echo "Error: \"$1\" not found."
+		exit 1
+	fi
+
+	if ! [[ -r "$1" ]]; then
+		echo "Error: \"$1\" is not readable."
+		exit 1
+	fi
+
 	if ! [[ $(file -b "$1") == *"text"* ]]; then
 		echo "Error: \"$1\" is not a text file or it is UTF-16 without BOM"
 		exit 1
