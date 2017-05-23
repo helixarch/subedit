@@ -102,6 +102,46 @@ check_file ()
 }
 
 
+read_srt ()
+{
+	unix2dos -q "$1" 2> /dev/null
+
+	# Read text file to array
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	arraysrt=()
+	for line in $(cat "$1"); do
+		arraysrt+=($line)
+	done
+
+	IFS=$old_IFS		# restore default field separator
+
+
+	# Remove empty lines at the end
+	if (( ${#arraysrt[-1]} == 0 )); then
+		unset arraysrt[-1]
+	fi
+	while :; do
+		if (( ${#arraysrt[-1]} == 1 )); then
+			unset arraysrt[-1]
+		else
+			break
+		fi
+	done
+
+
+	# Re-create the subtitle array with new counter
+	subcounter=0
+	for ((i=0; i<=${#arraysrt[@]}; i++)); do
+		if [[ ${arraysrt[$i]} =~ ^([0-9]+) ]] && [[ ${arraysrt[((i+1))]} =~ $regextime ]]; then
+			((subcounter++))
+			arraysrt[$i]="$subcounter"
+		fi
+	done
+}
+
+
 check_srt ()
 {
 	srtok=""
@@ -200,18 +240,8 @@ shift_time ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
-	unix2dos -q "$inputfilename"
-
-	# Read text file to array
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
-
-	for line in $(cat "$inputfilename"); do
-		arraysrt+=($line)
-	done
-
-	IFS=$old_IFS		# restore default field separator
-
+	# Read text file to arraysrt
+	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Shifting time of \"$inputfilename\" by $shifttime..."
@@ -308,18 +338,8 @@ change_fps ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
-	unix2dos -q "$inputfilename"
-
-	# Read text file to array
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
-
-	for line in $(cat "$inputfilename"); do
-		arraysrt+=($line)
-	done
-
-	IFS=$old_IFS		# restore default field separator
-
+	# Read text file to arraysrt
+	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	if [[ $pal2ntsc ]]; then
@@ -402,18 +422,8 @@ adjust_time ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
-	unix2dos -q "$inputfilename"
-
-	# Read text file to array
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
-
-	for line in $(cat "$inputfilename"); do
-		arraysrt+=($line)
-	done
-
-	IFS=$old_IFS		# restore default field separator
-
+	# Read text file to arraysrt
+	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Adjusting time of \"$inputfilename\"..."
@@ -527,17 +537,8 @@ adjust_time_v2 ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
-	unix2dos -q "$inputfilename"
-
-	# Read text file to array
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
-
-	for line in $(cat "$inputfilename"); do
-		arraysrt+=($line)
-	done
-
-	IFS=$old_IFS		# restore default field separator
+	# Read text file to arraysrt
+	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Adjusting time of \"$inputfilename\"..."
@@ -694,15 +695,7 @@ synchronize_with_file ()
 	check_file "$synchronizefile"
 
 	# Read file to synchronize to
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
-
-	for line in $(cat "$synchronizefile"); do
-		arraysrt+=($line)
-	done
-
-	IFS=$old_IFS		# restore default field separator
-
+	read_srt "$synchronizefile"
 
 	# Check if the srt is OK
 	check_srt "$synchronizefile"
@@ -754,19 +747,8 @@ synchronize_with_file ()
 		# Check if the input file is a text
 		check_file "$inputfilename"
 
-		unix2dos -q "$inputfilename"
-
-		# Read text file to array
-		arraysrt=()
-		old_IFS=$IFS		# save the field separator
-		IFS=$'\n'			# new field separator, the end of line
-
-		for line in $(cat "$inputfilename"); do
-			arraysrt+=($line)
-		done
-
-		IFS=$old_IFS		# restore default field separator
-
+		# Read text file to arraysrt
+		read_srt "$inputfilename"
 
 		# Check if the srt is OK
 		check_srt "$inputfilename" "Synchronizing \"$inputfilename\" with \"$synchronizefile\"..."
@@ -861,18 +843,8 @@ synchronize_with_file ()
 		# Check if the input file is a text
 		check_file "$inputfilename"
 
-		unix2dos -q "$inputfilename"
-
-		# Read text file to array
-		arraysrt=()
-		old_IFS=$IFS		# save the field separator
-		IFS=$'\n'			# new field separator, the end of line
-
-		for line in $(cat "$inputfilename"); do
-			arraysrt+=($line)
-		done
-
-		IFS=$old_IFS		# restore default field separator
+		# Read text file to arraysrt
+		read_srt "$inputfilename"
 
 		# Check if the srt is OK
 		check_srt "$inputfilename" "Synchronizing \"$inputfilename\" with \"$synchronizefile\"..."
@@ -1206,17 +1178,16 @@ srt2_sub ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
-	unix2dos -q "$inputfilename"
+	# Read text file to arraysrt
+	read_srt "$inputfilename"
 
-	# Read text file to array
 	# The encoding must be UTF-8
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
-
+	IFS=$'\n'
 	encoding=$(file -b --mime-encoding $inputfilename)
-	for line in $(iconv -f $encoding -t utf-8 "$inputfilename"); do
-		arraysrt+=($line)
-	done
+	temparraysrt=( $(printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8) )
+	unset arraysrt
+	arraysrt+=("${temparraysrt[@]}")
+	unset temparraysrt
 
 	# Check if the srt is OK
 	newfilename="${inputfilename%.*}.sub"
@@ -1853,59 +1824,27 @@ join_srt ()
 	fi
 
 	# Check if the input file is a text
-	check_file "$inputfilename"
 	check_file "$joinsrt"
 
-	unix2dos -q "$inputfilename"
-	unix2dos -q "$joinsrt"
+	# Read text file to arraysrt
+	read_srt "$joinsrt"
 
-	# Read text files to array
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
+	# Check if the srt is OK
+	check_srt "$joinsrt"
 
-	for line in $(cat "$inputfilename"); do
-		arraysrt+=($line)
-	done
-
-	for line in $(cat "$joinsrt"); do
-		arraysrtjoin+=($line)
-	done
-
-	IFS=$old_IFS		# restore default field separator
+	# Create arraysrtjoin from arraysrt
+	arraysrtjoin+=("${arraysrt[@]}")
 
 
-	# Check if the srt are OK
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
+	# Read text file to arraysrt
+	read_srt "$inputfilename"
+
+	# Check if the srt is OK
 	check_srt "$inputfilename"
 
-	for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
-		if [[ ${arraysrtjoin[$i]} =~ $regextime ]]; then
-			srtok="true"
-			break
-		fi
-	done
-
-	if ! [[ $srtok ]]; then
-		echo "Error: \"$joinsrt\" is not a valid srt file"; exit 1
-	fi
-
-
-	# Re-create the first subtitle array with new counter
-	subcounter=0
-	for ((i=0; i<=${#arraysrt[@]}; i++)); do
-		if [[ ${arraysrt[((i+1))]} =~ $regextime ]] && [[ ${arraysrt[$i]} =~ ^([0-9]+) ]]; then
-			((subcounter++))
-			arraysrt[$i]="$subcounter"
-		fi
-	done
-
-	# Remove empty lines at the end
-	while :; do
-		if (( ${#arraysrt[-1]} == 1 )); then
-			unset arraysrt[-1]
-		else
-			break
-		fi
-	done
 
 	# Add an empty line
 	arraysrt+=("")
@@ -2009,15 +1948,6 @@ join_srt ()
 	# Add the second array to the first
 	arraysrt+=("${arraysrtjoin[@]}")
 
-	# Remove empty lines at the end. Again
-	while :; do
-		if (( ${#arraysrt[-1]} == 1 )); then
-			unset arraysrt[-1]
-		else
-			break
-		fi
-	done
-
 	# Write to the txt file the contents of array.
 	basename=${inputfilename%.*}
 	j="_join.srt"
@@ -2032,17 +1962,8 @@ split_srt ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
-	unix2dos -q "$inputfilename"
-
-	# Read text file to array
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
-
-	for line in $(cat "$inputfilename"); do
-		arraysrt+=($line)
-	done
-
-	IFS=$old_IFS		# restore default field separator
+	# Read text file to arraysrt
+	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Splitting \"$inputfilename\"..."
@@ -2148,14 +2069,6 @@ split_srt ()
 		sign="${BASH_REMATCH[1]}"
 		splitinteger="${BASH_REMATCH[2]}"
 
-		# Re-create the subtitle array with new counter
-		for ((i=0; i<=${#arraysrt[@]}; i++)); do
-			if [[ ${arraysrt[((i+1))]} =~ $regextime ]] && [[ ${arraysrt[$i]} =~ ^([0-9]+) ]]; then
-				((subcounter++))
-				arraysrt[$i]="$subcounter"
-			fi
-		done
-
 		if [[ $sign == "-" ]]; then
 			splitinteger=$(($subcounter - $splitinteger))
 		fi
@@ -2237,14 +2150,6 @@ split_srt ()
 			echo "Error: The numerator must be less than the denominator and both must not be 0."; exit 1
 		fi
 
-		# Re-create the subtitle array with new counter
-		for ((i=0; i<=${#arraysrt[@]}; i++)); do
-			if [[ ${arraysrt[((i+1))]} =~ $regextime ]] && [[ ${arraysrt[$i]} =~ ^([0-9]+) ]]; then
-				((subcounter++))
-				arraysrt[$i]="$subcounter"
-			fi
-		done
-
 		if [[ $sign == "-" ]]; then
 			if ((subcounter%2 == 1)) && ((denominator/numerator == 2)); then
 				splitinteger=$((1 + subcounter*((denominator - numerator))/denominator))
@@ -2296,26 +2201,12 @@ split_srt ()
 		fi
 	done
 
-	# Remove empty lines at the end
-	while :; do
-		if (( ${#arraysrtsplit1[-1]} == 1 )); then
-			unset arraysrtsplit1[-1]
-		else
-			break
-		fi
-	done
 
-	if (( ${#arraysrtsplit2[-1]} == 0 )); then
-		unset arraysrtsplit2[-1]
+	# Remove an empty line at the end
+	if (( ${#arraysrtsplit1[-1]} == 0 )); then
+		unset arraysrtsplit1[-1]
 	fi
 
-	while :; do
-		if (( ${#arraysrtsplit2[-1]} == 1 )); then
-			unset arraysrtsplit2[-1]
-		else
-			break
-		fi
-	done
 
 	# Write to the txt file the contents of the two arrays.
 	basename=${inputfilename%.*}
