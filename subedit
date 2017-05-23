@@ -110,10 +110,52 @@ read_srt ()
 	old_IFS=$IFS		# save the field separator
 	IFS=$'\n'			# new field separator, the end of line
 
-	arraysrt=()
+	temparraysrt=()
 	for line in $(cat "$1"); do
-		arraysrt+=($line)
+		temparraysrt+=($line)
 	done
+
+
+	# Remove empty subtitles & remove extra empty lines before each integer
+	buffer=()
+	arraysrt=()
+	regexnotonlyspace="^[ ]+[^ ]+.+"
+	regexspace="^[ ]+"
+	for ((i=0; i<=${#temparraysrt[@]}; i++)); do
+		if [[ ${temparraysrt[$i]} =~ ^([0-9]+) ]] && [[ ${temparraysrt[((i+1))]} =~ $regextime ]]; then
+			while :; do
+				if [[ $buffer ]] && (( ${#buffer[-1]} == 1 )); then
+					unset buffer[-1]
+				elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexnotonlyspace ]]; then
+					break
+				elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexspace ]]; then
+					unset buffer[-1]
+				else
+					break
+				fi
+			done
+			if [[ $buffer ]] && ! [[ ${buffer[-1]} =~ $regextime ]]; then
+				arraysrt+=("${buffer[@]}")
+				if [[ $buffer ]]; then arraysrt+=(""); fi
+			fi
+			buffer=()
+		fi
+		buffer+=(${temparraysrt[$i]})
+	done
+	while :; do
+		if [[ $buffer ]] && (( ${#buffer[-1]} == 1 )); then
+			unset buffer[-1]
+		elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexnotonlyspace ]]; then
+			break
+		elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexspace ]]; then
+			unset buffer[-1]
+		else
+			break
+		fi
+	done
+	if [[ $buffer ]] && ! [[ ${buffer[-1]} =~ $regextime ]]; then
+		arraysrt+=("${buffer[@]}")
+	fi
 
 	IFS=$old_IFS		# restore default field separator
 
@@ -1752,15 +1794,6 @@ srt2_sub ()
 		line=${newarraysrt[$i]}
 
 		if [[ $line =~ $regextime ]]; then
-			# Remove empty lines at the end
-			while :; do
-				if (( ${#elementsub[@]} > 0 )) && (( ${#elementsub[-1]} == 1 )); then
-					unset elementsub[-1]
-				else
-					break
-				fi
-			done
-
 			h1="${BASH_REMATCH[1]}"
 			m1="${BASH_REMATCH[2]}"
 			s1="${BASH_REMATCH[3]}"
@@ -1788,15 +1821,6 @@ srt2_sub ()
 			elementsub+=(\|$line)
 		else
 			elementsub+=($line)
-		fi
-	done
-
-	# Remove empty lines at the end
-	while :; do
-		if (( ${#elementsub[@]} > 0 )) && (( ${#elementsub[-1]} == 1 )); then
-			unset elementsub[-1]
-		else
-			break
 		fi
 	done
 
