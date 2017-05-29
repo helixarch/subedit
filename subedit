@@ -1020,10 +1020,15 @@ replace_text ()
 	# Check if the srt or sub is OK
 	check_srt_and_sub "$inputfilename" "Replacing \"$replace1\" with \"$replace2\" in file \"$inputfilename\""
 
+	case "$subtitleis" in
+		"srt") read_srt "$inputfilename"; printf "%s\n" "${arraysrt[@]}" > "$inputfilename" ;;
+		"sub") read_sub "$inputfilename"; printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
+	esac
+
 	if [[ $replace3 ]]; then
-		sed -i s"/$replace1/$replace2/g" "$inputfilename"
+		sed -b -i s"/$replace1/$replace2/g" "$inputfilename"
 	else
-		sed -i s"/$replace1/$replace2/ig" "$inputfilename"
+		sed -b -i s"/$replace1/$replace2/ig" "$inputfilename"
 	fi
 }
 
@@ -1905,7 +1910,7 @@ srt2_sub ()
 
 	# Write to the txt file the contents of array.
 	if (( ${#arraysub[@]} >= 1 )); then
-		printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
+		printf "%s\r\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
 		echo "Error: Not a valid srt file"; exit 1
 	fi
