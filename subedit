@@ -191,6 +191,86 @@ read_srt ()
 }
 
 
+read_sub ()
+{
+	unix2dos -q "$1" 2> /dev/null
+
+	# Remove any empty subtitle lines before the first non-empty dialog line
+	# The -b parameter open files in binary mode (CR+LFs are not processed specially) and makes sed behave in Cygwin like in Linux. In Linux it is ignored
+	sed -b s'/^\({[0-9]\+}{[0-9]\+}\)\(\({[CSFPY]:[^}]*}\)*\)\([|[:blank:]]*[|]*\({[csfy]:[^}]*}\)*[|[:blank:]]*[|]\)*\(.*\)/\1\2\6/'g -i "$1"
+
+	# Regular expressions for multiple tags that need to become one
+	color_size_TAGS="((\{[S]:[0-9]+\})?(\{[C]:[$][A-F0-9]{6}\})?(\{[S]:[0-9]+\})?)"
+	color_size_tags="((\{[s]:[0-9]+\})?(\{[c]:[$][A-F0-9]{6}\})?(\{[s]:[0-9]+\})?)"
+	regex_merge_Y_tags="^(\{[0-9]+\}\{[0-9]+\}$color_size_TAGS)$color_size_tags({Y:([ibus]+)})?$color_size_TAGS$color_size_tags({Y:([ibus]+)})?$color_size_TAGS$color_size_tags({Y:([ibus]+)})?$color_size_TAGS$color_size_tags({Y:([ibus]+)})?(.*)$"
+	regex_merge_y_tags1="^(\{[0-9]+\}\{[0-9]+\}$color_size_TAGS({Y:[ibus]+})?$color_size_tags)({y:([ibus]+)})?$color_size_tags({y:([ibus]+)})?$color_size_tags({y:([ibus]+)})?$color_size_tags({y:([ibus]+)})?(.*)$"
+	regex_merge_y_tags2="^($color_size_tags)({y:([ibus]+)})?$color_size_tags({y:([ibus]+)})?$color_size_tags({y:([ibus]+)})?$color_size_tags({y:([ibus]+)})?(.*)$"
+
+	# Read text file to array and delete empty and duplicate subs
+	arraysub=()
+	regexemptysub="^\{([0-9]+)\}\{([0-9]+)\}(\{[cCsSfFPyY]:[^}]*\})*([|[:blank:]]*)$cr$"
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	encoding=$(file -b --mime-encoding "$1")
+
+	for line in $(iconv -f $encoding -t utf-8 "$1" 2> /dev/null); do
+		if [[ $line =~ $regexsub1 ]]; then
+			arraysub+=($line)
+		fi
+		break
+	done
+
+	for line in $(iconv -f $encoding -t utf-8 "$1" 2> /dev/null); do
+		if ! [[ $line =~ $regexemptysub ]] && ! [[ $line =~ $regexsub1 ]] && [[ $line =~ $regexsub ]] && [[ ${line,,} != ${arraysub[-1],,} ]]; then
+			# Merge multiple Y tags
+			if [[ $line =~ $regex_merge_Y_tags ]] && [[ ${BASH_REMATCH[10]} ]]; then
+				ibus_matches=${BASH_REMATCH[11]}${BASH_REMATCH[21]}${BASH_REMATCH[31]}${BASH_REMATCH[41]}
+				tag_values=""
+				if [[ $ibus_matches == *"i"* ]]; then tag_values+="i"; fi
+				if [[ $ibus_matches == *"b"* ]]; then tag_values+="b"; fi
+				if [[ $ibus_matches == *"u"* ]]; then tag_values+="u"; fi
+				if [[ $ibus_matches == *"s"* ]]; then tag_values+="s"; fi
+				line="${BASH_REMATCH[1]}${BASH_REMATCH[12]}${BASH_REMATCH[22]}${BASH_REMATCH[32]}{Y:$tag_values}${BASH_REMATCH[6]}${BASH_REMATCH[16]}${BASH_REMATCH[26]}${BASH_REMATCH[36]}${BASH_REMATCH[42]}"
+			fi
+
+			IFS=$'|'
+			read -r -a split_line <<< "$line"
+			# Merge multiple y tags in the first line
+			if [[ ${split_line[0]} =~ $regex_merge_y_tags1 ]] && [[ ${BASH_REMATCH[11]} ]]; then
+				ibus_matches=${BASH_REMATCH[12]}${BASH_REMATCH[18]}${BASH_REMATCH[24]}${BASH_REMATCH[30]}
+				tag_values=""
+				if [[ $ibus_matches == *"i"* ]]; then tag_values+="i"; fi
+				if [[ $ibus_matches == *"b"* ]]; then tag_values+="b"; fi
+				if [[ $ibus_matches == *"u"* ]]; then tag_values+="u"; fi
+				if [[ $ibus_matches == *"s"* ]]; then tag_values+="s"; fi
+				split_line[0]="${BASH_REMATCH[1]}${BASH_REMATCH[13]}${BASH_REMATCH[19]}${BASH_REMATCH[25]}{y:$tag_values}${BASH_REMATCH[31]}"
+			fi
+			line_new=${split_line[0]}
+
+			# Merge multiple y tags in the rest of the lines
+			for ((i=1; i<=${#split_line[@]}-1; i++)); do
+				if [[ ${split_line[$i]} =~ $regex_merge_y_tags2 ]] && [[ ${BASH_REMATCH[6]} ]]; then
+					ibus_matches=${BASH_REMATCH[7]}${BASH_REMATCH[13]}${BASH_REMATCH[19]}${BASH_REMATCH[25]}
+					tag_values=""
+					if [[ $ibus_matches == *"i"* ]]; then tag_values+="i"; fi
+					if [[ $ibus_matches == *"b"* ]]; then tag_values+="b"; fi
+					if [[ $ibus_matches == *"u"* ]]; then tag_values+="u"; fi
+					if [[ $ibus_matches == *"s"* ]]; then tag_values+="s"; fi
+					split_line[$i]="${BASH_REMATCH[1]}${BASH_REMATCH[8]}${BASH_REMATCH[14]}${BASH_REMATCH[20]}{y:$tag_values}${BASH_REMATCH[26]}"
+				fi
+				line_new+="|${split_line[$i]}"
+			done
+			IFS=$'\n'
+
+			arraysub+=($line_new)
+		fi 2> /dev/null
+	done
+
+	IFS=$old_IFS		# restore default field separator
+}
+
+
 check_srt ()
 {
 	srtok=""
@@ -966,19 +1046,8 @@ sub2_srt ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
-	unix2dos -q "$inputfilename"
-
-	# Read text file to array
-	old_IFS=$IFS		# save the field separator
-	IFS=$'\n'			# new field separator, the end of line
-
-	encoding=$(file -b --mime-encoding $inputfilename)
-	for line in $(iconv -f $encoding -t utf-8 "$inputfilename"); do
-		arraysub+=($line)
-	done
-
-	IFS=$old_IFS		# restore default field separator
-
+	# Read text file to arraysub
+	read_sub "$inputfilename"
 
 	# Check if the sub is OK
 	newfilename="${inputfilename%.*}.srt"
@@ -1190,15 +1259,15 @@ sub2_srt ()
 			arraysrt+=("$j1 --> $j2")
 			arraysrt+=("${arraysubs[@]}")
 			arraysrt+=("")
-		elif [[ $line == "" ]] || (( ${#line} == 1 )) || [[ $line =~ $regexsub1 ]]; then
-			:
-		else
-			echo "Warning: There's something wrong with line $(($i+1)) in the sub file"
 		fi
 	done
 
 	IFS=$old_IFS		# restore default field separator
 
+	# Remove an empty line at the end
+	if (( ${#arraysrt[-1]} == 0 )); then
+		unset arraysrt[-1]
+	fi
 
 	# Write to the txt file the contents of array.
 	if (( ${#arraysrt[@]} > 2 )); then
