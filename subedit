@@ -116,62 +116,64 @@ read_srt ()
 	done
 
 
-	# Remove empty subtitles & remove extra empty lines before each integer
+	# Remove empty subtitles, remove duplicate subtitles and remove extra empty lines before each integer
 	buffer=()
+	buffer_old=()	# This is used to search for duplicate subtitles
 	arraysrt=()
 	regexnotonlyspace="^[ ]+[^ ]+.+"
 	regexspace="^[ ]+"
-	for ((i=0; i<=${#temparraysrt[@]}; i++)); do
-		if [[ ${temparraysrt[$i]} =~ ^([0-9]+) ]] && [[ ${temparraysrt[((i+1))]} =~ $regextime ]]; then
-			while :; do
-				if [[ $buffer ]] && (( ${#buffer[-1]} == 1 )); then
-					unset buffer[-1]
-				elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexnotonlyspace ]]; then
-					break
-				elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexspace ]]; then
-					unset buffer[-1]
+
+	# This was put inside a function because it needs to run twice
+	srtcleaning ()
+	{
+		while :; do
+			if [[ $buffer ]] && (( ${#buffer[-1]} == 1 )); then
+				unset buffer[-1]
+			elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexnotonlyspace ]]; then
+				break
+			elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexspace ]]; then
+				unset buffer[-1]
+			else
+				break
+			fi
+		done
+
+		if [[ $buffer_old ]] && (( ${#buffer_old[@]} == ${#buffer[@]} )); then
+			check=1
+			for ((j=1; j<=${#buffer_old[@]}-1; j++)); do
+				if [[ ${buffer_old[$j],,} == ${buffer[$j],,} ]]; then
+					((check++))
 				else
 					break
 				fi
 			done
-			if [[ $buffer ]] && ! [[ ${buffer[-1]} =~ $regextime ]]; then
-				arraysrt+=("${buffer[@]}")
-				if [[ $buffer ]]; then arraysrt+=(""); fi
+			if (( $check == ${#buffer_old[@]} )); then
+				duplicatefound="True"
 			fi
+		fi
+
+		if ! [[ $duplicatefound ]] && [[ $buffer ]] && ! [[ ${buffer[-1]} =~ $regextime ]]; then
+			arraysrt+=("${buffer[@]}")
+			arraysrt+=("")
+		fi
+	}
+
+	for ((i=0; i<=${#temparraysrt[@]}; i++)); do
+		if [[ ${temparraysrt[$i]} =~ ^([0-9]+) ]] && [[ ${temparraysrt[((i+1))]} =~ $regextime ]]; then
+			srtcleaning
+
+			unset duplicatefound
+			buffer_old=()
+			buffer_old+=("${buffer[@]}")
 			buffer=()
 		fi
 		buffer+=(${temparraysrt[$i]})
 	done
-	while :; do
-		if [[ $buffer ]] && (( ${#buffer[-1]} == 1 )); then
-			unset buffer[-1]
-		elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexnotonlyspace ]]; then
-			break
-		elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexspace ]]; then
-			unset buffer[-1]
-		else
-			break
-		fi
-	done
-	if [[ $buffer ]] && ! [[ ${buffer[-1]} =~ $regextime ]]; then
-		arraysrt+=("${buffer[@]}")
-	fi
+
+	# Everything inside the previous for-loop must run one last time for the last subtitle
+	srtcleaning
 
 	IFS=$old_IFS		# restore default field separator
-
-
-	# Remove empty lines at the end
-	if (( ${#arraysrt[-1]} == 0 )); then
-		unset arraysrt[-1]
-	fi
-	while :; do
-		if (( ${#arraysrt[-1]} == 1 )); then
-			unset arraysrt[-1]
-		else
-			break
-		fi
-	done
-
 
 	# Re-create the subtitle array with new counter
 	subcounter=0
@@ -181,6 +183,11 @@ read_srt ()
 			arraysrt[$i]="$subcounter"
 		fi
 	done
+
+	# Remove an empty line at the end
+	if [[ $arraysrt ]] && (( ${#arraysrt[-1]} == 0 )); then
+		unset arraysrt[-1]
+	fi
 }
 
 
