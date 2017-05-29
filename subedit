@@ -557,6 +557,11 @@ adjust_time ()
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Adjusting time of \"$inputfilename\"..."
 
+	# Check if the file has only 1 subtitle
+	if ((subcounter == 1)); then
+		echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; exit 1
+	fi
+
 
 	# Find the first and last subtitle time
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
@@ -671,6 +676,11 @@ adjust_time_v2 ()
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Adjusting time of \"$inputfilename\"..."
+
+	# Check if the file has only 1 subtitle
+	if ((subcounter == 1)); then
+		echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; exit 1
+	fi
 
 
 	# Find the first and last subtitle time
@@ -881,6 +891,11 @@ synchronize_with_file ()
 
 		# Check if the srt is OK
 		check_srt "$inputfilename" "Synchronizing \"$inputfilename\" with \"$synchronizefile\"..."
+
+		# Check if the file has only 1 subtitle
+		if ((subcounter == 1)); then
+			echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; exit 1
+		fi
 
 
 		# Find the first and last subtitle time
