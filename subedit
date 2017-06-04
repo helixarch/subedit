@@ -17,6 +17,12 @@
 #	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+# Define colors and bold letters
+green=$(tput setaf 2)
+cyan=$(tput setaf 6)
+bold=$(tput bold)
+normal=$(tput sgr0)
+
 # Define regular expressions
 regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
 regexsub="^\{([0-9]+)\}\{([0-9]+)\}(.+)$"
@@ -26,31 +32,293 @@ regexsub1="^\{[1]\}\{[1]\}(.+)$"
 # Help
 get_help ()
 {
-	echo ""
-	echo "$(tput setaf 6)NAME $(tput sgr0)"
-	echo "    subedit"
-	echo ""
-	echo "$(tput setaf 6)DESCRIPTION $(tput sgr0)"
-	echo "    Command line subtitle editor."
-	echo ""
-	echo "$(tput setaf 6)PARAMETERS $(tput sgr0)"
-	echo "    -i        Input file. Takes value of a fullpath or a filename in your working directory."
-	echo "    -s        Shift time. Takes value of type 'hh:mm:ss:fff'."
-	echo "    -p        Switch. Changes the fps from NTSC to PAL."
-	echo "    -n        Switch. Changes the fps from PAL to NTSC."
-	echo "    -a        Adjust time. Takes value of type '(+/-)hh:mm:ss,fff_(+/-)hh:mm:ss,fff'."
-	echo "    -h        Display this info and exit."
-	exit
+case $((10#$(date +%S)%2)) in
+	0) authors[0]="George Savvidis (stargr@gmail.com)"; authors[1]="Odysseas Raftopoulos" ;;
+	1) authors[0]="Odysseas Raftopoulos"; authors[1]="George Savvidis (stargr@gmail.com)" ;;
+esac
+
+text1="
+${cyan}NAME${normal}
+  subedit
+
+
+${cyan}DESCRIPTION${normal}
+  Command line srt subtitle editor.
+
+
+${cyan}PARAMETERS${normal}
+  ${bold}-i${normal}      Input file. Takes value of a fullpath or a filename in your working
+          directory.
+  ${bold}-s${normal}      Shift time. Syntax: '(+/-/a/z)hh:mm:ss,fff'.
+  ${bold}-p${normal}      Switch. Changes the fps from NTSC (23.976/29.970) to PAL (25).
+  ${bold}-n${normal}      Switch. Changes the fps from PAL (25) to NTSC (23.976/29.970).
+  ${bold}-a${normal}      Adjust time. Syntax: '(+/-)hh:mm:ss,fff (+/-)hh:mm:ss,fff'.
+  ${bold}-1${normal}      Adjust beginning time. Syntax: '(+/-)hh:mm:ss,fff'.
+  ${bold}-2${normal}      Adjust end time. Syntax: '(+/-)hh:mm:ss,fff'.
+  ${bold}-y${normal}      Synchronize with file. Takes value of a fullpath or a filename in your
+          working directory.
+  ${bold}-Y${normal}      Optional switch, to be used with -y. Replaces times of file to be
+          synchronized with the times of the synchronization file.
+  ${bold}-e${normal}      Replace, case insensitive. Syntax: '\"Text to be replaced\" \"New text\"'.
+          The double quotes are necessary.
+  ${bold}-E${normal}      Replace, case sensitive. Syntax: '\"Text to be replaced\" \"New text\"'.
+          The double quotes are necessary.
+  ${bold}-t${normal}      Convert sub to srt. Syntax: 'film' or 'ntsc' or 'pal' or custom fps
+          (Pal = 25, film = 23.976 and ntsc = 29.970).
+  ${bold}-u${normal}      Convert srt to sub. Syntax: 'film' or 'ntsc' or 'pal' or custom fps
+          (Pal = 25, film = 23.976 and ntsc = 29.970).
+  ${bold}-U${normal}      Convert srt to sub. Same as the -u parameter above but also ignores any
+          srt tags that were not converted to respective sub tags.
+  ${bold}-j${normal}      Join two srt subtitles. Takes value of a fullpath or a filename in your
+          working directory.
+  ${bold}-J${normal}      Join time. Optional parameter, to be used with -j. Syntax: 'hh:mm:ss,fff'.
+  ${bold}-x${normal}      Split srt subtitle. Syntax: '(+/-)hh:mm:ss,fff' or '(+/-)SUB_INTEGER' or
+          '(+/-)INTEGER:INTEGERt' or '(+/-)INTEGER:INTEGERn'
+  ${bold}-X${normal}      Split time. Optional switch, to be used with -x. Makes second generated
+          file begin with time 00:00:00,000.
+  ${bold}-h${normal}      Display help.
+  ${bold}-H${normal}      Display help with more information and examples.
+"
+
+text2="
+${cyan}NOTES${normal}
+  Filenames must be enclosed in quotes if they contain spaces or other special characters.
+  -i (input file) is required in every case.
+  -s parameter: plus sign (or no sign at all) adds time, where the minus sign subtracts time.
+  -a, -1 and -2 parameters can take absolute time value or shifting time value if you use the +/-.
+  -1 and -2 parameters can be combined (equivalent of using just -a).
+  -e and -E parameters (replace) work with both srt and sub subtitle files.
+  -t parameter (sub to srt) needs a sub subtitle file.
+  -J shifts the time after beginning of the second file in the output file.
+  -x can take 4 different syntaxes:
+    i)   '(+/-)hh:mm:ss,fff':     splitting time.
+    ii)  '(+/-)SUB_INTEGER':      splitting subtitle integer.
+    iii) '(+/-)INTEGER:INTEGERt': fraction where we split the subtitle file according to total time.
+    iv)  '(+/-)INTEGER:INTEGERn': fraction where we split the subtitle file according to number of subtitles.
+    The minus sign means that counting begins from the end of the subtitle file.
+    The plus sign means that counting begins from the beginning. (Equivalent of using no sign at all).
+  Bellow you'll find examples for every parameter.
+
+
+${cyan}EXAMPLES${normal}
+
+  ${bold}Shift time${normal}
+
+  ${bold}${green}Example 1${normal}
+  subedit -i foo.srt -s 00:00:03,100
+  Shifts time by 3.1 seconds.
+
+  ${bold}${green}Example 2${normal}
+  subedit -i foo.srt -s +00:00:03,100
+  The same as above.
+
+  ${bold}${green}Example 3${normal}
+  subedit -i foo.srt -s -00:00:02,500
+  Shifts time by -2.5 seconds.
+
+  ${bold}${green}Example 4${normal}
+  subedit -i foo.srt -s a00:00:11,530
+  Calculates and applies the appropriate shift time value so that the first subtitle starts at 00:00:11,530.
+
+  ${bold}${green}Example 5${normal}
+  subedit -i foo.srt -s z01:38:32,600
+  Calculates and applies the appropriate shift time value so that the last subtitle starts at 01:38:32,600.
+
+  ${bold}Convert NTSC to PAL${normal}
+
+  ${bold}${green}Example 6${normal}
+  subedit -i foo.srt -p
+
+
+  ${bold}Convert PAL to NTSC${normal}
+
+  ${bold}${green}Example 7${normal}
+  subedit -i foo.srt -n
+
+
+  ${bold}Adjust time${normal}
+
+  ${bold}${green}Example 8${normal}
+  subedit -i foo.srt -a 00:00:17,360 00:48:02,200
+  Sets beginning time to 00:00:17,360 and end time to 00:48:02,200.
+  Both times are absolute.
+
+  ${bold}${green}Example 9${normal}
+  subedit -i foo.srt -a +00:00:02,600 -00:00:05,920
+  Shifts beginning time by +00:00:02,600 and end time by -00:00:05,920.
+  Both times are relative.
+
+  ${bold}${green}Example 10${normal}
+  subedit -i foo.srt -a 00:00:17,360 -00:00:05,920
+  Sets beginning time to 00:00:17,360 and shifts end time by -00:00:05,920.
+
+  ${bold}${green}Example 11${normal}
+  subedit -i foo.srt -1 00:00:17,360
+  Sets beginning time to 00:00:17,360.
+
+  ${bold}${green}Example 12${normal}
+  subedit -i foo.srt -2 +00:00:03,810
+  Shifts end time by 00:00:03,810.
+
+  ${bold}${green}Example 13${normal}
+  subedit -i foo.srt -1 00:00:17,360 -2 -00:00:05,920
+  This has the same result as Example 10.
+
+
+  ${bold}Synchronize with file${normal}
+
+  ${bold}${green}Example 14${normal}
+  subedit -i foo.srt -y boo.srt
+  Synchronizes foo.srt with boo.srt. Subtitle times of foo.srt
+  will be adjusted with the beginning and end time of boo.srt.
+
+  ${bold}${green}Example 15${normal}
+  subedit -i foo.srt -y boo.srt -Y
+  Synchronizes foo.srt with boo.srt. Subtitle times of foo.srt
+  will be replaced with the times of boo.srt.
+
+
+  ${bold}Replace text${normal}
+
+  ${bold}${green}Example 16${normal}
+  subedit -i foo.srt -e \"George Smlth\" \"George Smith\"
+  Replaces text \"george smlth\" (case insensitive) with \"George Smith\".
+
+  ${bold}${green}Example 17${normal}
+  subedit -i foo.srt -E \"i'm\" \"I'm\"
+  Replaces text \"i'm\" (case sensitive) with \"I'm\".
+
+
+  ${bold}Convert sub to srt${normal}
+
+  ${bold}${green}Example 18${normal}
+  subedit -i foo.sub -t pal
+  Assumes that foo.sub is in 25 fps and creates a new file foo.srt.
+
+  ${bold}${green}Example 19${normal}
+  subedit -i foo.sub -t film
+  Assumes that foo.sub is in 23.976 fps and creates a new file foo.srt.
+
+  ${bold}${green}Example 20${normal}
+  subedit -i foo.sub -t ntsc
+  Assumes that foo.sub is in 29.970 fps and creates a new file foo.srt.
+
+  ${bold}${green}Example 21${normal}
+  subedit -i foo.sub -t 15.338
+  Assumes that foo.sub is in 15.338 fps and creates a new file foo.srt.
+
+
+  ${bold}Convert srt to sub${normal}
+
+  ${bold}${green}Example 22${normal}
+  subedit -i foo.srt -u pal
+  Creates a new file foo.sub that's in 25 fps.
+
+  ${bold}${green}Example 23${normal}
+  subedit -i foo.srt -U pal
+  Same as above but any srt tags that were not converted to sub tags will not pass to the .sub file.
+
+  ${bold}${green}Example 24${normal}
+  subedit -i foo.srt -u film
+  Creates a new file foo.sub that's in 23.976 fps.
+
+  ${bold}${green}Example 25${normal}
+  subedit -i foo.srt -u ntsc
+  Creates a new file foo.sub that's in 29.970 fps.
+
+  ${bold}${green}Example 26${normal}
+  subedit -i foo.srt -u 12
+  Creates a new file foo.sub that's in 12 fps.
+
+
+  ${bold}Join two srt${normal}
+
+  ${bold}${green}Example 27${normal}
+  subedit -i foo.srt -j boo.srt
+  Joins foo.srt and boo.srt to a new file foo_join.srt.
+  The subtitle times in boo.srt are added unmodified.
+
+  ${bold}${green}Example 28${normal}
+  subedit -i foo.srt -j boo.srt -J 00:48:05,956
+  Joins foo.srt and boo.srt to a new file foo_join.srt.
+  The subtitle times in boo.srt are shifted by 00:48:05,956 before added.
+
+
+  ${bold}Split srt to two files${normal}
+
+  ${bold}${green}Example 29${normal}
+  subedit -i foo.srt -x 01:02:39,000
+  Splits foo.srt at 01:02:39,000 to two files foo_1.srt and foo_2.srt.
+  The subtitle times in foo_2.srt remain unmodified.
+
+  ${bold}${green}Example 30${normal}
+  subedit -i foo.srt -x -00:59:14,000
+  Splits foo.srt at 00:59:14,000 (counting from the end) to two files foo_1.srt and foo_2.srt.
+  The subtitle times in foo_2.srt remain unmodified.
+
+  ${bold}${green}Example 31${normal}
+  subedit -i foo.srt -x 431
+  Splits foo.srt at subtitle number 431 to two files foo_1.srt and foo_2.srt.
+  The subtitle times in foo_2.srt remain unmodified.
+
+  ${bold}${green}Example 32${normal}
+  subedit -i foo.srt -x -399
+  Splits foo.srt at subtitle number 399 (counting from the end) to two files foo_1.srt and foo_2.srt.
+  The subtitle times in foo_2.srt remain unmodified.
+
+  ${bold}${green}Example 33${normal}
+  subedit -i foo.srt -x 1:2t
+  Splits foo.srt at 1/2 of total time to two files foo_1.srt and foo_2.srt.
+  The subtitle times in foo_2.srt remain unmodified.
+
+  ${bold}${green}Example 34${normal}
+  subedit -i foo.srt -x -2:3t
+  Splits foo.srt at 2/3 of total time (counting from the end) to two files foo_1.srt and foo_2.srt.
+  The subtitle times in foo_2.srt remain unmodified.
+
+  ${bold}${green}Example 35${normal}
+  subedit -i foo.srt -x 3:4n
+  Splits foo.srt at 3/4 of total subtitles to two files foo_1.srt and foo_2.srt.
+  The subtitle times in foo_2.srt remain unmodified.
+
+  ${bold}${green}Example 36${normal}
+  subedit -i foo.srt -x -1:5n
+  Splits foo.srt at 1/5 of total subtitles (counting from the end) to two files foo_1.srt and foo_2.srt.
+  The subtitle times in foo_2.srt remain unmodified.
+
+  ${bold}${green}Example 37${normal}
+  subedit -i foo.srt -x 01:02:39,000 -X
+  Splits foo.srt at 01:02:39,000 to two files foo_1.srt and foo_2.srt.
+  foo_2.srt begins with time 00:00:00,000.
+
+  ${bold}${green}Example 38${normal}
+  subedit -i foo.srt -x -399 -X
+  Splits foo.srt at subtitle number 399 (counting from the end) to two files foo_1.srt and foo_2.srt.
+  foo_2.srt begins with time 00:00:00,000.
+
+
+${cyan}ABOUT${normal}
+  Authors:      ${authors[0]}
+                ${authors[1]}
+
+  This program is licensed under GPLv2.
+"
+
+printf "%s\n" "$text1"
+if [[ $longhelp ]]; then
+	printf "%s\n" "$text2"
+fi
+exit 0
 }
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:Xh" opt); then
+if ( ! getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:XhH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:Xh" parameter; do
+while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:XhH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		s) shifttime=$OPTARG ;;
@@ -77,6 +345,7 @@ while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:Xh" parameter; do
 		x) splitsrt=$OPTARG ;;
 		X) splittime="True" ;;
 		h) get_help ;;
+		H) longhelp="True"; get_help ;;
 		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
 	esac
 done
