@@ -84,6 +84,7 @@ text2="
 ${cyan}NOTES${normal}
   Filenames must be enclosed in quotes if they contain spaces or other special characters.
   -i (input file) is required in every case.
+  If only -i parameter is used then the subtitle goes through a basic clean-up (empty subtitles are removed etc.)
   -s parameter: plus sign (or no sign at all) adds time, where the minus sign subtracts time.
   -a, -1 and -2 parameters can take absolute time value or shifting time value if you use the +/-.
   -1 and -2 parameters can be combined (equivalent of using just -a).
@@ -101,78 +102,84 @@ ${cyan}NOTES${normal}
 
 
 ${cyan}EXAMPLES${normal}
+  ${bold}Basic clean-up (purify)${normal}
+
+  ${bold}${green}Example 1${normal}
+  subedit -i foo.srt
+  Removes empty subtitles, duplicate subtitles and extra empty lines, fixes subtitles' indexes, etc.
+
 
   ${bold}Shift time${normal}
 
-  ${bold}${green}Example 1${normal}
+  ${bold}${green}Example 2${normal}
   subedit -i foo.srt -s 00:00:03,100
   Shifts time by 3.1 seconds.
 
-  ${bold}${green}Example 2${normal}
+  ${bold}${green}Example 3${normal}
   subedit -i foo.srt -s +00:00:03,100
   The same as above.
 
-  ${bold}${green}Example 3${normal}
+  ${bold}${green}Example 4${normal}
   subedit -i foo.srt -s -00:00:02,500
   Shifts time by -2.5 seconds.
 
-  ${bold}${green}Example 4${normal}
+  ${bold}${green}Example 5${normal}
   subedit -i foo.srt -s a00:00:11,530
   Calculates and applies the appropriate shift time value so that the first subtitle starts at 00:00:11,530.
 
-  ${bold}${green}Example 5${normal}
+  ${bold}${green}Example 6${normal}
   subedit -i foo.srt -s z01:38:32,600
   Calculates and applies the appropriate shift time value so that the last subtitle starts at 01:38:32,600.
 
   ${bold}Convert NTSC to PAL${normal}
 
-  ${bold}${green}Example 6${normal}
+  ${bold}${green}Example 7${normal}
   subedit -i foo.srt -p
 
 
   ${bold}Convert PAL to NTSC${normal}
 
-  ${bold}${green}Example 7${normal}
+  ${bold}${green}Example 8${normal}
   subedit -i foo.srt -n
 
 
   ${bold}Adjust time${normal}
 
-  ${bold}${green}Example 8${normal}
+  ${bold}${green}Example 9${normal}
   subedit -i foo.srt -a 00:00:17,360 00:48:02,200
   Sets beginning time to 00:00:17,360 and end time to 00:48:02,200.
   Both times are absolute.
 
-  ${bold}${green}Example 9${normal}
+  ${bold}${green}Example 10${normal}
   subedit -i foo.srt -a +00:00:02,600 -00:00:05,920
   Shifts beginning time by +00:00:02,600 and end time by -00:00:05,920.
   Both times are relative.
 
-  ${bold}${green}Example 10${normal}
+  ${bold}${green}Example 11${normal}
   subedit -i foo.srt -a 00:00:17,360 -00:00:05,920
   Sets beginning time to 00:00:17,360 and shifts end time by -00:00:05,920.
 
-  ${bold}${green}Example 11${normal}
+  ${bold}${green}Example 12${normal}
   subedit -i foo.srt -1 00:00:17,360
   Sets beginning time to 00:00:17,360.
 
-  ${bold}${green}Example 12${normal}
+  ${bold}${green}Example 13${normal}
   subedit -i foo.srt -2 +00:00:03,810
   Shifts end time by 00:00:03,810.
 
-  ${bold}${green}Example 13${normal}
+  ${bold}${green}Example 14${normal}
   subedit -i foo.srt -1 00:00:17,360 -2 -00:00:05,920
-  This has the same result as Example 10.
+  This has the same result as Example 11.
 
 
   ${bold}Synchronize with file${normal}
 
-  ${bold}${green}Example 14${normal}
+  ${bold}${green}Example 15${normal}
   subedit -i foo.srt -y boo.srt
   Synchronizes foo.srt with boo.srt. Subtitle times of foo.srt
   will be adjusted with the beginning and end time of boo.srt.
 
-  ${bold}${green}Example 15${normal}
+  ${bold}${green}Example 16${normal}
   subedit -i foo.srt -y boo.srt -Y
   Synchronizes foo.srt with boo.srt. Subtitle times of foo.srt
   will be replaced with the times of boo.srt.
@@ -180,65 +187,65 @@ ${cyan}EXAMPLES${normal}
 
   ${bold}Replace text${normal}
 
-  ${bold}${green}Example 16${normal}
+  ${bold}${green}Example 17${normal}
   subedit -i foo.srt -e \"George Smlth\" \"George Smith\"
   Replaces text \"george smlth\" (case insensitive) with \"George Smith\".
 
-  ${bold}${green}Example 17${normal}
+  ${bold}${green}Example 18${normal}
   subedit -i foo.srt -E \"i'm\" \"I'm\"
   Replaces text \"i'm\" (case sensitive) with \"I'm\".
 
 
   ${bold}Convert sub to srt${normal}
 
-  ${bold}${green}Example 18${normal}
+  ${bold}${green}Example 19${normal}
   subedit -i foo.sub -t pal
   Assumes that foo.sub is in 25 fps and creates a new file foo.srt.
 
-  ${bold}${green}Example 19${normal}
+  ${bold}${green}Example 20${normal}
   subedit -i foo.sub -t film
   Assumes that foo.sub is in 23.976 fps and creates a new file foo.srt.
 
-  ${bold}${green}Example 20${normal}
+  ${bold}${green}Example 21${normal}
   subedit -i foo.sub -t ntsc
   Assumes that foo.sub is in 29.970 fps and creates a new file foo.srt.
 
-  ${bold}${green}Example 21${normal}
+  ${bold}${green}Example 22${normal}
   subedit -i foo.sub -t 15.338
   Assumes that foo.sub is in 15.338 fps and creates a new file foo.srt.
 
 
   ${bold}Convert srt to sub${normal}
 
-  ${bold}${green}Example 22${normal}
+  ${bold}${green}Example 23${normal}
   subedit -i foo.srt -u pal
   Creates a new file foo.sub that's in 25 fps.
 
-  ${bold}${green}Example 23${normal}
+  ${bold}${green}Example 24${normal}
   subedit -i foo.srt -U pal
   Same as above but any srt tags that were not converted to sub tags will not pass to the .sub file.
 
-  ${bold}${green}Example 24${normal}
+  ${bold}${green}Example 25${normal}
   subedit -i foo.srt -u film
   Creates a new file foo.sub that's in 23.976 fps.
 
-  ${bold}${green}Example 25${normal}
+  ${bold}${green}Example 26${normal}
   subedit -i foo.srt -u ntsc
   Creates a new file foo.sub that's in 29.970 fps.
 
-  ${bold}${green}Example 26${normal}
+  ${bold}${green}Example 27${normal}
   subedit -i foo.srt -u 12
   Creates a new file foo.sub that's in 12 fps.
 
 
   ${bold}Join two srt${normal}
 
-  ${bold}${green}Example 27${normal}
+  ${bold}${green}Example 28${normal}
   subedit -i foo.srt -j boo.srt
   Joins foo.srt and boo.srt to a new file foo_join.srt.
   The subtitle times in boo.srt are added unmodified.
 
-  ${bold}${green}Example 28${normal}
+  ${bold}${green}Example 29${normal}
   subedit -i foo.srt -j boo.srt -J 00:48:05,956
   Joins foo.srt and boo.srt to a new file foo_join.srt.
   The subtitle times in boo.srt are shifted by 00:48:05,956 before added.
@@ -246,52 +253,52 @@ ${cyan}EXAMPLES${normal}
 
   ${bold}Split srt to two files${normal}
 
-  ${bold}${green}Example 29${normal}
+  ${bold}${green}Example 30${normal}
   subedit -i foo.srt -x 01:02:39,000
   Splits foo.srt at 01:02:39,000 to two files foo_1.srt and foo_2.srt.
   The subtitle times in foo_2.srt remain unmodified.
 
-  ${bold}${green}Example 30${normal}
+  ${bold}${green}Example 31${normal}
   subedit -i foo.srt -x -00:59:14,000
   Splits foo.srt at 00:59:14,000 (counting from the end) to two files foo_1.srt and foo_2.srt.
   The subtitle times in foo_2.srt remain unmodified.
 
-  ${bold}${green}Example 31${normal}
+  ${bold}${green}Example 32${normal}
   subedit -i foo.srt -x 431
   Splits foo.srt at subtitle number 431 to two files foo_1.srt and foo_2.srt.
   The subtitle times in foo_2.srt remain unmodified.
 
-  ${bold}${green}Example 32${normal}
+  ${bold}${green}Example 33${normal}
   subedit -i foo.srt -x -399
   Splits foo.srt at subtitle number 399 (counting from the end) to two files foo_1.srt and foo_2.srt.
   The subtitle times in foo_2.srt remain unmodified.
 
-  ${bold}${green}Example 33${normal}
+  ${bold}${green}Example 34${normal}
   subedit -i foo.srt -x 1:2t
   Splits foo.srt at 1/2 of total time to two files foo_1.srt and foo_2.srt.
   The subtitle times in foo_2.srt remain unmodified.
 
-  ${bold}${green}Example 34${normal}
+  ${bold}${green}Example 35${normal}
   subedit -i foo.srt -x -2:3t
   Splits foo.srt at 2/3 of total time (counting from the end) to two files foo_1.srt and foo_2.srt.
   The subtitle times in foo_2.srt remain unmodified.
 
-  ${bold}${green}Example 35${normal}
+  ${bold}${green}Example 36${normal}
   subedit -i foo.srt -x 3:4n
   Splits foo.srt at 3/4 of total subtitles to two files foo_1.srt and foo_2.srt.
   The subtitle times in foo_2.srt remain unmodified.
 
-  ${bold}${green}Example 36${normal}
+  ${bold}${green}Example 37${normal}
   subedit -i foo.srt -x -1:5n
   Splits foo.srt at 1/5 of total subtitles (counting from the end) to two files foo_1.srt and foo_2.srt.
   The subtitle times in foo_2.srt remain unmodified.
 
-  ${bold}${green}Example 37${normal}
+  ${bold}${green}Example 38${normal}
   subedit -i foo.srt -x 01:02:39,000 -X
   Splits foo.srt at 01:02:39,000 to two files foo_1.srt and foo_2.srt.
   foo_2.srt begins with time 00:00:00,000.
 
-  ${bold}${green}Example 38${normal}
+  ${bold}${green}Example 39${normal}
   subedit -i foo.srt -x -399 -X
   Splits foo.srt at subtitle number 399 (counting from the end) to two files foo_1.srt and foo_2.srt.
   foo_2.srt begins with time 00:00:00,000.
@@ -635,6 +642,21 @@ check_srt_and_sub ()
 
 
 ### Main functions
+basic_clean_up ()
+{
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
+	# Check if the srt or sub is OK
+	check_srt_and_sub "$inputfilename" "Purifying \"$inputfilename\""
+
+	case "$subtitleis" in
+		"srt") read_srt "$inputfilename"; printf "%s\n" "${arraysrt[@]}" > "$inputfilename" ;;
+		"sub") read_sub "$inputfilename"; printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
+	esac
+}
+
+
 shift_time ()
 {
 	# Calculate the time to move the subs
@@ -2666,6 +2688,8 @@ if [[ $inputfilename ]]; then
 		join_srt
 	elif [[ $splitsrt ]]; then
 		split_srt
+	else
+		basic_clean_up
 	fi
 	exit 0
 fi
