@@ -542,6 +542,12 @@ read_sub ()
 
 check_srt ()
 {
+	# Check the file extension
+	extension="${1##*.}"
+	if [[ "${extension,,}" != "srt" ]]; then
+		echo "Warning: \"$1\" does not have '.srt' extension"
+	fi
+
 	srtok=""
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		if [[ ${arraysrt[$i]} =~ $regextime ]]; then
@@ -559,6 +565,12 @@ check_srt ()
 
 check_sub ()
 {
+	# Check the file extension
+	extension="${1##*.}"
+	if [[ "${extension,,}" != "sub" ]]; then
+		echo "Warning: \"$1\" does not have '.sub' extension"
+	fi
+
 	subok=""
 	for ((i=0; i<=${#arraysub[@]}; i++)); do
 		line=${arraysub[$i]}
@@ -598,10 +610,20 @@ check_srt_and_sub ()
 		if ! [[ ${array[$i]} =~ $regexsub1 ]] && [[ ${array[$i]} =~ $regexsub ]]; then
 			if [[ $2 ]]; then echo $2; fi
 			subtitleis="sub"
+			# Check the file extension
+			extension="${1##*.}"
+			if [[ "${extension,,}" != "sub" ]]; then
+				echo "Warning: \"$1\" does not have '.sub' extension"
+			fi
 			break
 		elif [[ ${array[$i]} =~ $regextime ]]; then
 			if [[ $2 ]]; then echo $2; fi
 			subtitleis="srt"
+			# Check the file extension
+			extension="${1##*.}"
+			if [[ "${extension,,}" != "srt" ]]; then
+				echo "Warning: \"$1\" does not have '.srt' extension"
+			fi
 			break
 		fi
 	done
@@ -1327,10 +1349,6 @@ sub2_srt ()
 	else echo -e "Error: The sub2srt parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970"; exit 1
 	fi
 
-	if [[ "${inputfilename##*.}" != "sub" ]]; then
-		echo "Warning: \"$inputfilename\" does not have '.sub' extension"
-	fi
-
 
 	# Check if the input file is a text
 	check_file "$inputfilename"
@@ -1575,10 +1593,6 @@ srt2_sub ()
 	elif [[ $srt2sub =~ ^[0-9]+$ ]]; then ratio=1; fps=$(($srt2sub * 1001)); firstline="{1}{1}$srt2sub.000"
 	elif [[ $srt2sub =~ ^[0-9]+\.[0-9]*$ ]]; then fpsint=${srt2sub%.*}; fpsdecimal=${srt2sub##*.}; decimallength=${#fpsdecimal}; if (( $decimallength == 0 )); then ratio=1; trizero="000"; firstline="{1}{1}$srt2sub$trizero"; else ratio=1$(eval printf '0%.0s' {1..$decimallength}); firstline="{1}{1}$srt2sub"; fi; fps=$(($(echo $fpsint$fpsdecimal) * 1001))
 	else echo -e "Error: The srt2sub parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970"; exit 1
-	fi
-
-	if [[ "${inputfilename##*.}" != "srt" ]]; then
-		echo "Warning: \"$inputfilename\" does not have '.srt' extension"
 	fi
 
 
@@ -2204,14 +2218,6 @@ srt2_sub ()
 
 join_srt ()
 {
-	if [[ "${inputfilename##*.}" != "srt" ]]; then
-		echo "Warning: \"$inputfilename\" does not have '.srt' extension"
-	fi
-
-	if [[ "${joinsrt##*.}" != "srt" ]]; then
-		echo "Warning: \"$joinsrt\" does not have '.srt' extension"
-	fi
-
 	# Check if the input file is a text
 	check_file "$joinsrt"
 
