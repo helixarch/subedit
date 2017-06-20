@@ -421,7 +421,13 @@ check_file ()
 
 read_srt ()
 {
-	unix2dos -q "$1" 2> /dev/null
+	# Make all line endings dos-like
+	if ! [[ $subtitleis ]]; then
+		dos2unix -q "$1" 2> /dev/null
+		temptext=$(cat "$1")
+		echo "$temptext" | tr '\r' '\n' > "$1"
+		unix2dos -q "$1" 2> /dev/null
+	fi
 
 	# Read text file to array
 	old_IFS=$IFS		# save the field separator
@@ -510,7 +516,13 @@ read_srt ()
 
 read_sub ()
 {
-	unix2dos -q "$1" 2> /dev/null
+	# Make all line endings dos-like
+	if ! [[ $subtitleis ]]; then
+		dos2unix -q "$1" 2> /dev/null
+		temptext=$(cat "$1")
+		echo "$temptext" | tr '\r' '\n' > "$1"
+		unix2dos -q "$1" 2> /dev/null
+	fi
 
 	# Remove any empty subtitle lines before the first non-empty dialog line
 	# The -b parameter open files in binary mode (CR+LFs are not processed specially) and makes sed behave in Cygwin like in Linux. In Linux it is ignored
@@ -638,6 +650,10 @@ check_sub ()
 
 check_srt_and_sub ()
 {
+	# Make all line endings dos-like
+	dos2unix -q "$1" 2> /dev/null
+	temptext=$(cat "$1")
+	echo "$temptext" | tr '\r' '\n' > "$1"
 	unix2dos -q "$1" 2> /dev/null
 
 	# Read text file to array
