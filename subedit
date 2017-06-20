@@ -23,10 +23,16 @@ cyan=$(tput setaf 6)
 bold=$(tput bold)
 normal=$(tput sgr0)
 
+# Define carriage return and new line
+cr=$(echo -e "\r")
+nl=$(echo -e "\n")
+
 # Define regular expressions
-regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])"
-regexsub="^\{([0-9]+)\}\{([0-9]+)\}(.+)$"
-regexsub1="^\{[1]\}\{[1]\}(.+)$"
+regexinteger="^([0-9]+)$cr$"
+regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$cr$"
+regexsub="^\{([0-9]+)\}\{([0-9]+)\}(.+)$cr$"
+regexsub1="^\{[1]\}\{[1]\}(.+)$cr$"
+regexemptyline="^($cr$nl|$nl|$cr)$"
 
 
 # Help
@@ -444,13 +450,13 @@ read_srt ()
 	buffer_old=()	# This is used to search for duplicate subtitles
 	arraysrt=()
 	regexnotonlyspace="^[ ]+[^ ]+.+"
-	regexspace="^[ ]+"
+	regexspace="^[ ]+$cr$"
 
 	# This was put inside a function because it needs to run twice
 	srtcleaning ()
 	{
 		while :; do
-			if [[ $buffer ]] && (( ${#buffer[-1]} == 1 )); then
+			if [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexemptyline ]]; then
 				unset buffer[-1]
 			elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexnotonlyspace ]]; then
 				break
@@ -477,12 +483,12 @@ read_srt ()
 
 		if ! [[ $duplicatefound ]] && [[ $buffer ]] && ! [[ ${buffer[-1]} =~ $regextime ]]; then
 			arraysrt+=("${buffer[@]}")
-			arraysrt+=("")
+			arraysrt+=("$cr")
 		fi
 	}
 
 	for ((i=0; i<=${#temparraysrt[@]}; i++)); do
-		if [[ ${temparraysrt[$i]} =~ ^([0-9]+) ]] && [[ ${temparraysrt[((i+1))]} =~ $regextime ]]; then
+		if [[ ${temparraysrt[$i]} =~ $regexinteger ]] && [[ ${temparraysrt[((i+1))]} =~ $regextime ]]; then
 			srtcleaning
 
 			unset duplicatefound
@@ -501,14 +507,14 @@ read_srt ()
 	# Re-create the subtitle array with new counter
 	subcounter=0
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
-		if [[ ${arraysrt[$i]} =~ ^([0-9]+) ]] && [[ ${arraysrt[((i+1))]} =~ $regextime ]]; then
+		if [[ ${arraysrt[$i]} =~ $regexinteger ]] && [[ ${arraysrt[((i+1))]} =~ $regextime ]]; then
 			((subcounter++))
-			arraysrt[$i]="$subcounter"
+			arraysrt[$i]="$subcounter$cr"
 		fi
 	done
 
 	# Remove an empty line at the end
-	if [[ $arraysrt ]] && (( ${#arraysrt[-1]} == 0 )); then
+	if [[ $arraysrt ]] && [[ ${arraysrt[-1]} =~ $regexemptyline ]]; then
 		unset arraysrt[-1]
 	fi
 }
@@ -1651,7 +1657,7 @@ sub2_srt ()
 	IFS=$old_IFS		# restore default field separator
 
 	# Remove an empty line at the end
-	if (( ${#arraysrt[-1]} == 0 )); then
+	if [[ ${arraysrt[-1]} =~ $regexemptyline ]]; then
 		unset arraysrt[-1]
 	fi
 
@@ -2327,7 +2333,7 @@ join_srt ()
 		echo "Joining \"$inputfilename\" with \"$joinsrt\"..."
 		# Re-create the second subtitle array with new counter
 		for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
-			if [[ ${arraysrtjoin[$((i+1))]} =~ $regextime ]] && [[ ${arraysrtjoin[$i]} =~ ^([0-9]+) ]]; then
+			if [[ ${arraysrtjoin[$((i+1))]} =~ $regextime ]] && [[ ${arraysrtjoin[$i]} =~ $regexinteger ]]; then
 				((subcounter++))
 				arraysrtjoin[$i]="$subcounter"
 			fi
@@ -2411,7 +2417,7 @@ join_srt ()
 
 		# Re-create the second subtitle array with new counter
 		for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
-			if [[ ${arraysrtjoin[$((i+1))]} =~ $regextime ]] && [[ ${arraysrtjoin[$i]} =~ ^([0-9]+) ]]; then
+			if [[ ${arraysrtjoin[$((i+1))]} =~ $regextime ]] && [[ ${arraysrtjoin[$i]} =~ $regexinteger ]]; then
 				((subcounter++))
 				arraysrtjoin[$i]="$subcounter"
 			fi
@@ -2557,8 +2563,8 @@ split_srt ()
 			line=${arraysrt[$i]}
 			nextline=${arraysrt[((i+1))]}
 
-			if ! [[ $splitsubfound ]] && [[ $nextline =~ $regextime ]] && [[ $line =~ ^([0-9]+) ]]; then
-				if ((line > splitinteger)); then
+			if ! [[ $splitsubfound ]] && [[ $nextline =~ $regextime ]] && [[ $line =~ $regexinteger ]]; then
+				if ((${BASH_REMATCH[1]} > splitinteger)); then
 					splitsubfound="True"
 				fi
 			fi
@@ -2648,8 +2654,8 @@ split_srt ()
 			line=${arraysrt[$i]}
 			nextline=${arraysrt[((i+1))]}
 
-			if ! [[ $splitsubfound ]] && [[ $nextline =~ $regextime ]] && [[ $line =~ ^([0-9]+) ]]; then
-				if ((line > splitinteger)); then
+			if ! [[ $splitsubfound ]] && [[ $nextline =~ $regextime ]] && [[ $line =~ $regexinteger ]]; then
+				if ((${BASH_REMATCH[1]} > splitinteger)); then
 					splitsubfound="True"
 				fi
 			fi
@@ -2669,7 +2675,7 @@ split_srt ()
 	# Re-create the second subtitle array with new counter
 	subcounter=0
 	for ((i=0; i<=${#arraysrtsplit2[@]}-1; i++)); do
-		if [[ ${arraysrtsplit2[((i+1))]} =~ $regextime ]] && [[ ${arraysrtsplit2[$i]} =~ ^([0-9]+) ]]; then
+		if [[ ${arraysrtsplit2[((i+1))]} =~ $regextime ]] && [[ ${arraysrtsplit2[$i]} =~ $regexinteger ]]; then
 			((subcounter++))
 			arraysrtsplit2[$i]="$subcounter"
 		fi
@@ -2677,7 +2683,7 @@ split_srt ()
 
 
 	# Remove an empty line at the end
-	if (( ${#arraysrtsplit1[-1]} == 0 )); then
+	if [[ ${arraysrtsplit1[-1]} =~ $regexemptyline ]]; then
 		unset arraysrtsplit1[-1]
 	fi
 
