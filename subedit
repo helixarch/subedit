@@ -439,18 +439,48 @@ read_srt ()
 	old_IFS=$IFS		# save the field separator
 	IFS=$'\n'			# new field separator, the end of line
 
-	temparraysrt=()
+	temp1arraysrt=()
 	for line in $(cat "$1"); do
-		temparraysrt+=($line)
+		temp1arraysrt+=($line)
 	done
+
+
+	# Remove any empty lines between the integer and the time and add integer if it doesn't exist
+	temp2arraysrt=()
+	regexemptyorblank="^[[:blank:]]*$cr$"
+	for ((i=0; i<=${#temp1arraysrt[@]}; i++)); do
+		temp2arraysrt+=(${temp1arraysrt[$i]})
+		if [[ ${temp1arraysrt[((i+1))]} =~ $regextime ]]; then 
+			if [[ ${temp1arraysrt[$i]} =~ $regexemptyorblank ]]; then
+				while :; do
+					if [[ ${temp2arraysrt[-1]} =~ $regexemptyorblank ]]; then
+						unset temp2arraysrt[-1]
+					else
+						break
+					fi
+				done
+
+				if ! [[ ${temp2arraysrt[-1]} =~ $regexinteger ]]; then
+					temp2arraysrt+=("$cr")
+					temp2arraysrt+=("0$cr")
+				fi
+			fi
+			if ! [[ ${temp2arraysrt[-1]} =~ $regexinteger ]]; then
+				temp2arraysrt+=("$cr")
+				temp2arraysrt+=("0$cr")
+			fi
+		fi
+	done
+
+	unset temp1arraysrt
 
 
 	# Remove empty subtitles, remove duplicate subtitles and remove extra empty lines before each integer
 	buffer=()
 	buffer_old=()	# This is used to search for duplicate subtitles
 	arraysrt=()
-	regexnotonlyspace="^[ ]+[^ ]+.+"
-	regexspace="^[ ]+$cr$"
+	regexnotonlyblank="^[[:blank:]]+[^[:blank:]]+.+"
+	regexblank="^[[:blank:]]+$cr$"
 
 	# This was put inside a function because it needs to run twice
 	srtcleaning ()
@@ -458,9 +488,9 @@ read_srt ()
 		while :; do
 			if [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexemptyline ]]; then
 				unset buffer[-1]
-			elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexnotonlyspace ]]; then
+			elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexnotonlyblank ]]; then
 				break
-			elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexspace ]]; then
+			elif [[ $buffer ]] && [[ ${buffer[-1]} =~ $regexblank ]]; then
 				unset buffer[-1]
 			else
 				break
@@ -487,8 +517,8 @@ read_srt ()
 		fi
 	}
 
-	for ((i=0; i<=${#temparraysrt[@]}; i++)); do
-		if [[ ${temparraysrt[$i]} =~ $regexinteger ]] && [[ ${temparraysrt[((i+1))]} =~ $regextime ]]; then
+	for ((i=0; i<=${#temp2arraysrt[@]}; i++)); do
+		if [[ ${temp2arraysrt[$i]} =~ $regexinteger ]] && [[ ${temp2arraysrt[((i+1))]} =~ $regextime ]]; then
 			srtcleaning
 
 			unset duplicatefound
@@ -496,8 +526,10 @@ read_srt ()
 			buffer_old+=("${buffer[@]}")
 			buffer=()
 		fi
-		buffer+=(${temparraysrt[$i]})
+		buffer+=(${temp2arraysrt[$i]})
 	done
+
+	unset temp2arraysrt
 
 	# Everything inside the previous for-loop must run one last time for the last subtitle
 	srtcleaning
