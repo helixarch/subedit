@@ -466,12 +466,16 @@ read_srt ()
 		unix2dos -q "$1" 2> /dev/null
 	fi
 
+	# Delete tags that contain no text
+	# The -b parameter open files in binary mode (CR+LFs are not processed specially) and makes sed behave in Cygwin like in Linux. In Linux it is ignored
+	sed -b -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -i "$1"
+
 	# Read text file to array
 	old_IFS=$IFS		# save the field separator
 	IFS=$'\n'			# new field separator, the end of line
 
 	temp1arraysrt=()
-	for line in $(cat "$1"); do
+	for line in $(iconv -f $encoding -t utf-8 "$1" 2> /dev/null); do
 		temp1arraysrt+=($line)
 	done
 
@@ -506,18 +510,85 @@ read_srt ()
 	unset temp1arraysrt
 
 
-	# Remove any empty lines between the time and the first dialog line
-	temp1arraysrt=()
+	# If a line ends with an opening tag, move it to the beginning of the next line
+	# If a line begins with a closing tag, move it to the end of the preceding line
+	regexendswithopentag="^(.*)((<[ibus]>)|(<font[^>]*>))($cr)$"
+	regexstartswithclosetag="^((</[ibus]>)+|(</font>)+)(.*)($cr)$"
+	temp3arraysrt=()
 	for ((i=0; i<=${#temp2arraysrt[@]}; i++)); do
-		temp1arraysrt+=(${temp2arraysrt[$i]})
-		if (( ${#temp1arraysrt[@]} > 1)) && [[ ${temp1arraysrt[-2]} =~ $regextime ]]; then 
-			if [[ ${temp1arraysrt[-1]} =~ $regexemptyorblank ]]; then
-				unset temp1arraysrt[-1]
-			fi
+		if [[ ${temp2arraysrt[((i+1))]} =~ $regextime ]]; then
+			temp3arraysrt+=(${temp2arraysrt[$i]})
+		else
+			temp3arraysrt+=($tobecarriedover1e$tobecarriedover1d$tobecarriedover1c$tobecarriedover1b$tobecarriedover1a${temp2arraysrt[$i]})
+		fi
+
+		unset tobecarriedover1a tobecarriedover1b tobecarriedover1c tobecarriedover1d tobecarriedover1e
+
+		if [[ ${temp3arraysrt[-1]} =~ $regexendswithopentag ]]; then
+			unset temp3arraysrt[-1]
+			temp3arraysrt+=(${BASH_REMATCH[1]}${BASH_REMATCH[5]})
+			tobecarriedover1a=${BASH_REMATCH[2]}
+		fi
+
+		if [[ ${temp3arraysrt[-1]} =~ $regexendswithopentag ]]; then
+			unset temp3arraysrt[-1]
+			temp3arraysrt+=(${BASH_REMATCH[1]}${BASH_REMATCH[5]})
+			tobecarriedover1b=${BASH_REMATCH[2]}
+		fi
+
+		if [[ ${temp3arraysrt[-1]} =~ $regexendswithopentag ]]; then
+			unset temp3arraysrt[-1]
+			temp3arraysrt+=(${BASH_REMATCH[1]}${BASH_REMATCH[5]})
+			tobecarriedover1c=${BASH_REMATCH[2]}
+		fi
+
+		if [[ ${temp3arraysrt[-1]} =~ $regexendswithopentag ]]; then
+			unset temp3arraysrt[-1]
+			temp3arraysrt+=(${BASH_REMATCH[1]}${BASH_REMATCH[5]})
+			tobecarriedover1d=${BASH_REMATCH[2]}
+		fi
+
+		if [[ ${temp3arraysrt[-1]} =~ $regexendswithopentag ]]; then
+			unset temp3arraysrt[-1]
+			temp3arraysrt+=(${BASH_REMATCH[1]}${BASH_REMATCH[5]})
+			tobecarriedover1e=${BASH_REMATCH[2]}
+		fi
+
+		if [[ ${temp3arraysrt[-1]} =~ $regexstartswithclosetag ]]; then
+			unset temp3arraysrt[-1]
+			temp3arraysrt+=(${BASH_REMATCH[4]}${BASH_REMATCH[5]})
+		fi
+
+		if ! [[ $tobecarriedover1a ]] && ! [[ ${temp2arraysrt[$i]} =~ $regextime ]] && [[ ${temp2arraysrt[((i+1))]} =~ $regexstartswithclosetag ]]; then
+			tobecarriedover2=${BASH_REMATCH[1]}
+			[[ ${temp3arraysrt[-1]} =~ (.*)($cr)$ ]]
+			tobecarriedover3=${BASH_REMATCH[1]}
+			unset temp3arraysrt[-1]
+			temp3arraysrt+=($tobecarriedover3$tobecarriedover2$cr)
+			unset tobecarriedover2
+			unset tobecarriedover3
 		fi
 	done
 
 	unset temp2arraysrt
+
+
+	# Delete tags that contain no text. Again.
+	temp4arraysrt=( $(printf "%s\n" "${temp3arraysrt[@]}" | sed -b -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" -e s"/<\([ibus]\)><\/\1>//g" -e s"/<font[^>]*><\/font>//g" | iconv -f utf-8 -t $encoding) )
+
+
+	# Remove any empty lines between the time and the first dialog line
+	temp5arraysrt=()
+	for ((i=0; i<=${#temp4arraysrt[@]}; i++)); do
+		temp5arraysrt+=(${temp4arraysrt[$i]})
+		if (( ${#temp5arraysrt[@]} > 1)) && [[ ${temp5arraysrt[-2]} =~ $regextime ]]; then 
+			if [[ ${temp5arraysrt[-1]} =~ $regexemptyorblank ]]; then
+				unset temp5arraysrt[-1]
+			fi
+		fi
+	done
+
+	unset temp4arraysrt
 
 
 	# Remove empty subtitles, remove duplicate subtitles and remove extra empty lines before each integer
@@ -562,8 +633,8 @@ read_srt ()
 		fi
 	}
 
-	for ((i=0; i<=${#temp1arraysrt[@]}; i++)); do
-		if [[ ${temp1arraysrt[$i]} =~ $regexinteger ]] && [[ ${temp1arraysrt[((i+1))]} =~ $regextime ]]; then
+	for ((i=0; i<=${#temp5arraysrt[@]}; i++)); do
+		if [[ ${temp5arraysrt[$i]} =~ $regexinteger ]] && [[ ${temp5arraysrt[((i+1))]} =~ $regextime ]]; then
 			srtcleaning
 
 			unset duplicatefound
@@ -571,10 +642,10 @@ read_srt ()
 			buffer_old+=("${buffer[@]}")
 			buffer=()
 		fi
-		buffer+=(${temp1arraysrt[$i]})
+		buffer+=(${temp5arraysrt[$i]})
 	done
 
-	unset temp1arraysrt
+	unset temp5arraysrt
 
 	# Everything inside the previous for-loop must run one last time for the last subtitle
 	srtcleaning
@@ -608,7 +679,6 @@ read_sub ()
 	fi
 
 	# Remove any empty subtitle lines before the first non-empty dialog line
-	# The -b parameter open files in binary mode (CR+LFs are not processed specially) and makes sed behave in Cygwin like in Linux. In Linux it is ignored
 	sed -b s'/^\({[0-9]\+}{[0-9]\+}\)\(\({[CSFPY]:[^}]*}\)*\)\([|[:blank:]]*[|]*\({[csfy]:[^}]*}\)*[|[:blank:]]*[|]\)*\(.*\)/\1\2\6/'g -i "$1"
 
 	# Regular expressions for multiple tags that need to become one
