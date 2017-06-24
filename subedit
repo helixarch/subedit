@@ -418,7 +418,8 @@ check_file ()
 		exit 1
 	fi
 
-	if ! [[ $(file -b "$1") == *"text"* ]]; then
+	encoding=$(file -b --mime-encoding "$1")
+	if [[ $encoding == "binary" ]] || ! [[ $(file -b "$1") == *"text"* ]] && ! [[ $(file -b "$1") == *"Bio-Rad .PIC Image File"* ]]; then
 		echo "Error: \"$1\" is not a text file or it is UTF-16 without BOM"
 		exit 1
 	fi
@@ -432,7 +433,6 @@ check_file ()
 	# For subedit to be able to use uchardet put uchardet.exe inside /bin directory in the Cygwin installation folder.
 	# This uchardet has 2 problems: It needs windows-style path and it produces windows-style line endings.
 	# We work around them in subedit, but keep them in mind if you use this uchardet in the console.
-	encoding=$(file -b --mime-encoding "$1")
 	if [[ $encoding == "utf-16"* ]] || [[ $encoding == *"ascii"* ]]; then
 		:
 	elif [[ -x /usr/bin/uchardet ]]; then
