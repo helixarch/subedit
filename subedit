@@ -422,6 +422,37 @@ check_file ()
 		echo "Error: \"$1\" is not a text file or it is UTF-16 without BOM"
 		exit 1
 	fi
+
+	# Detect encoding of input file
+	# We use both file and uchardet (if it is available) because no one is perfect.
+	# file doesn't get right some non-unicode encodings but for UTF-16 is preferable
+	# than uchardet because the latter doesn't specify if it is UTF-16BE or UTF-16LE.
+	# uchardet doesn't exist for Cygwin but one place you can find a Windows binary is here:
+	# https://sourceforge.net/projects/cbadvanced/files/Repo/
+	# For subedit to be able to use uchardet put uchardet.exe inside /bin directory in the Cygwin installation folder.
+	# This uchardet has 2 problems: It needs windows-style path and it produces windows-style line endings.
+	# We work around them in subedit, but keep them in mind if you use this uchardet in the console.
+	encoding=$(file -b --mime-encoding "$1")
+	if [[ $encoding == "utf-16"* ]] || [[ $encoding == *"ascii"* ]]; then
+		:
+	elif [[ -x /usr/bin/uchardet ]]; then
+		cd "$(dirname "$1")"
+		encoding=$(uchardet "$(basename "$1")" | tr -d '\r')
+		cd - &> /dev/null
+	fi
+
+	# If the encoding is detected as ISO-8859-7, make it CP1253
+	if [[ ${encoding^^} == "ISO-8859-7" ]]; then
+		encoding="CP1253"
+	fi
+
+	# If text file is UTF-16 convert it to UTF-8
+	if [[ $encoding == "utf-16"* ]]; then
+		tempvar="$(cat "$1" | iconv -f $encoding -t utf-8)"
+		printf "%s\n" "$tempvar" > "$1"
+		encoding="utf-8"
+		unset tempvar
+	fi
 }
 
 
@@ -593,8 +624,6 @@ read_sub ()
 	old_IFS=$IFS		# save the field separator
 	IFS=$'\n'			# new field separator, the end of line
 
-	encoding=$(file -b --mime-encoding "$1")
-
 	for line in $(iconv -f $encoding -t utf-8 "$1" 2> /dev/null); do
 		if [[ $line =~ $regexsub1 ]]; then
 			arraysub+=($line)
@@ -711,8 +740,6 @@ check_srt_and_sub ()
 	# Read text file to array
 	old_IFS=$IFS		# save the field separator
 	IFS=$'\n'			# new field separator, the end of line
-
-	encoding=$(file -b --mime-encoding "$1")
 
 	array=()
 	for line in $(iconv -f $encoding -t utf-8 "$1" 2> /dev/null); do
@@ -1735,7 +1762,6 @@ srt2_sub ()
 
 	# The encoding must be UTF-8
 	IFS=$'\n'
-	encoding=$(file -b --mime-encoding $inputfilename)
 	temparraysrt=( $(printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8) )
 	unset arraysrt
 	arraysrt+=("${temparraysrt[@]}")
