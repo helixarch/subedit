@@ -972,7 +972,7 @@ shift_time ()
 
 			line_new="$j1 --> $j2"
 
-			arraysrt[$i]=$line_new
+			arraysrt[$i]=$line_new$cr
 		fi
 	done
 
@@ -1028,7 +1028,7 @@ change_fps ()
 
 			line_new="$j1 --> $j2"
 
-			arraysrt[$i]=$line_new
+			arraysrt[$i]=$line_new$cr
 		fi
 	done
 
@@ -1176,7 +1176,7 @@ adjust_time ()
 
 			line_new="$j1 --> $j2"
 
-			arraysrt[$i]=$line_new
+			arraysrt[$i]=$line_new$cr
 		fi
 	done
 
@@ -1338,7 +1338,7 @@ adjust_time_v2 ()
 
 			line_new="$j1 --> $j2"
 
-			arraysrt[$i]=$line_new
+			arraysrt[$i]=$line_new$cr
 		fi
 	done
 
@@ -1490,7 +1490,7 @@ synchronize_with_file ()
 
 				line_new="$j1 --> $j2"
 
-				arraysrt[$i]=$line_new
+				arraysrt[$i]=$line_new$cr
 			fi
 		done
 	else
@@ -1806,7 +1806,7 @@ sub2_srt ()
 
 	# Write to the txt file the contents of array.
 	if (( ${#arraysrt[@]} > 2 )); then
-		printf "%s\n" "${arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
+		printf "%s\r\n" "${arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
 		echo "Error: Not a valid sub file"; exit 1
 	fi
@@ -2469,7 +2469,7 @@ join_srt ()
 
 
 	# Add an empty line
-	arraysrt+=("")
+	arraysrt+=("$cr")
 
 	if ! [[ $jointime ]]; then
 		echo "Joining \"$inputfilename\" with \"$joinsrt\"..."
@@ -2477,7 +2477,7 @@ join_srt ()
 		for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
 			if [[ ${arraysrtjoin[$((i+1))]} =~ $regextime ]] && [[ ${arraysrtjoin[$i]} =~ $regexinteger ]]; then
 				((subcounter++))
-				arraysrtjoin[$i]="$subcounter"
+				arraysrtjoin[$i]="$subcounter$cr"
 			fi
 		done
 	else
@@ -2561,7 +2561,7 @@ join_srt ()
 		for ((i=0; i<=${#arraysrtjoin[@]}; i++)); do
 			if [[ ${arraysrtjoin[$((i+1))]} =~ $regextime ]] && [[ ${arraysrtjoin[$i]} =~ $regexinteger ]]; then
 				((subcounter++))
-				arraysrtjoin[$i]="$subcounter"
+				arraysrtjoin[$i]="$subcounter$cr"
 			fi
 		done
 	fi
@@ -2574,8 +2574,6 @@ join_srt ()
 	basename=${inputfilename%.*}
 	j="_join.srt"
 	printf "%s\n" "${arraysrt[@]}" > "$basename$j"
-
-	unix2dos -q "$basename$j"
 }
 
 
@@ -2819,7 +2817,7 @@ split_srt ()
 	for ((i=0; i<=${#arraysrtsplit2[@]}-1; i++)); do
 		if [[ ${arraysrtsplit2[((i+1))]} =~ $regextime ]] && [[ ${arraysrtsplit2[$i]} =~ $regexinteger ]]; then
 			((subcounter++))
-			arraysrtsplit2[$i]="$subcounter"
+			arraysrtsplit2[$i]="$subcounter$cr"
 		fi
 	done
 
@@ -2836,9 +2834,6 @@ split_srt ()
 	secondfile="_2.srt"
 	printf "%s\n" "${arraysrtsplit1[@]}" > "$basename$firstfile"
 	printf "%s\n" "${arraysrtsplit2[@]}" > "$basename$secondfile"
-
-	unix2dos -q "$basename$firstfile"
-	unix2dos -q "$basename$secondfile"
 
 
 	# If -X (splittime) exists:
