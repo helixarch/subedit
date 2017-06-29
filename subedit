@@ -1575,17 +1575,65 @@ replace_text ()
 	# Check if the srt or sub is OK
 	check_srt_and_sub "$inputfilename" "Replacing \"$replace1\" with \"$replace2\" in file \"$inputfilename\""
 
+	IFS=$'\n'			# new field separator, the end of line
+
 	if [[ $replace3 ]]; then
 		case "$subtitleis" in
-			"srt") read_srt "$inputfilename"; printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8 | sed -b s"/$replace1/$replace2/g" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
-			"sub") read_sub "$inputfilename"; printf "%s\n" "${arraysub[@]}" | sed -b s"/$replace1/$replace2/g" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
+			"srt")
+				read_srt "$inputfilename"
+				temparray=( $(printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8 | sed -b s"/$replace1/$replace2/g") )
+				# If the conversion from UTF-8 to the original encoding isn't possible, keep the UTF-8
+				printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding &> /dev/null
+				if (($? == 0)); then
+					printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+				else
+					printf "%s\n" "${temparray[@]}" > "$inputfilename"
+					echo "Warning: \"$inputfilename\" has been saved with UTF-8 encoding"
+				fi
+				unset temparray ;;
+			"sub")
+				read_sub "$inputfilename"
+				temparray=( $(printf "%s\n" "${arraysub[@]}" | sed -b s"/$replace1/$replace2/g") )
+				# If the conversion from UTF-8 to the original encoding isn't possible, keep the UTF-8
+				printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding &> /dev/null
+				if (($? == 0)); then
+					printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+				else
+					printf "%s\n" "${temparray[@]}" > "$inputfilename"
+					echo "Warning: \"$inputfilename\" has been saved with UTF-8 encoding"
+				fi
+				unset temparray ;;
 		esac
 	else
 		case "$subtitleis" in
-			"srt") read_srt "$inputfilename"; printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8 | sed -b s"/$replace1/$replace2/ig" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
-			"sub") read_sub "$inputfilename"; printf "%s\n" "${arraysub[@]}" | sed -b s"/$replace1/$replace2/ig" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
+			"srt")
+				read_srt "$inputfilename"
+				temparray=( $(printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8 | sed -b s"/$replace1/$replace2/ig") )
+				# If the conversion from UTF-8 to the original encoding isn't possible, keep the UTF-8
+				printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding &> /dev/null
+				if (($? == 0)); then
+					printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+				else
+					printf "%s\n" "${temparray[@]}" > "$inputfilename"
+					echo "Warning: \"$inputfilename\" has been saved with UTF-8 encoding"
+				fi
+				unset temparray ;;
+			"sub")
+				read_sub "$inputfilename"
+				temparray=( $(printf "%s\n" "${arraysub[@]}" | sed -b s"/$replace1/$replace2/ig") )
+				# If the conversion from UTF-8 to the original encoding isn't possible, keep the UTF-8
+				printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding &> /dev/null
+				if (($? == 0)); then
+					printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+				else
+					printf "%s\n" "${temparray[@]}" > "$inputfilename"
+					echo "Warning: \"$inputfilename\" has been saved with UTF-8 encoding"
+				fi
+				unset temparray ;;
 		esac
 	fi
+
+	IFS=$old_IFS		# restore default field separator
 }
 
 
