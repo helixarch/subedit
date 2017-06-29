@@ -1575,15 +1575,16 @@ replace_text ()
 	# Check if the srt or sub is OK
 	check_srt_and_sub "$inputfilename" "Replacing \"$replace1\" with \"$replace2\" in file \"$inputfilename\""
 
-	case "$subtitleis" in
-		"srt") read_srt "$inputfilename"; printf "%s\n" "${arraysrt[@]}" > "$inputfilename" ;;
-		"sub") read_sub "$inputfilename"; printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
-	esac
-
 	if [[ $replace3 ]]; then
-		sed -b -i s"/$replace1/$replace2/g" "$inputfilename"
+		case "$subtitleis" in
+			"srt") read_srt "$inputfilename"; printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8 | sed -b s"/$replace1/$replace2/g" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
+			"sub") read_sub "$inputfilename"; printf "%s\n" "${arraysub[@]}" | sed -b s"/$replace1/$replace2/g" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
+		esac
 	else
-		sed -b -i s"/$replace1/$replace2/ig" "$inputfilename"
+		case "$subtitleis" in
+			"srt") read_srt "$inputfilename"; printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8 | sed -b s"/$replace1/$replace2/ig" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
+			"sub") read_sub "$inputfilename"; printf "%s\n" "${arraysub[@]}" | sed -b s"/$replace1/$replace2/ig" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
+		esac
 	fi
 }
 
