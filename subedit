@@ -2518,6 +2518,9 @@ join_srt ()
 	# Check if the input file is a text
 	check_file "$joinsrt"
 
+	# Encoding of the join file
+	encodingjoin=$encoding
+
 	# Read text file to arraysrt
 	read_srt "$joinsrt"
 
@@ -2531,11 +2534,35 @@ join_srt ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Encoding of the input file
+	encodinginput=$encoding
+
 	# Read text file to arraysrt
 	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename"
+
+
+	# Compare the encodings of the two files and convert to UTF-8 if necessary
+	if [[ ${encodinginput,,} != ${encodingjoin,,} ]]; then
+		IFS=$'\n'
+		echo "Warning: The two files have different encodings (${encodinginput^^} and ${encodingjoin^^}). The output file will be UTF-8."
+		if [[ ${encodinginput,,} != "utf-8" ]]; then
+			temparraysrt=( $(printf "%s\n" "${arraysrt[@]}" | iconv -f $encodinginput -t utf-8) )
+			unset arraysrt
+			arraysrt+=("${temparraysrt[@]}")
+			unset temparraysrt
+		fi
+
+		if [[ ${encodingjoin,,} != "utf-8" ]]; then
+			temparraysrtjoin=( $(printf "%s\n" "${arraysrtjoin[@]}" | iconv -f $encodingjoin -t utf-8) )
+			unset arraysrtjoin
+			arraysrtjoin+=("${temparraysrtjoin[@]}")
+			unset temparraysrtjoin
+		fi
+		IFS=$old_IFS
+	fi
 
 
 	# Add an empty line
