@@ -79,6 +79,10 @@ ${cyan}PARAMETERS${normal}
   ${bold}-i \"Input file\"${normal}
       Subtitle file to process. Accepts srt or sub files, depending on what other parameter is used.
 
+  ${bold}-d \"Input directory\"${normal}
+      Directory containing subtitle files to process. Can contain srt, sub or both subtitle types.
+      Works with all parameters except with -y (synchronize with file) and -j (join two srt subtitles).
+
   ${bold}-b [Switch]${normal}
       Backup input file. Makes a copy of the input file in the same directory with the .bak sufix.
       If the backup already exists, it does nothing. Can be used with any other parameter.
@@ -176,7 +180,7 @@ text2="${cyan}NOTES${normal}
   • If the argument is a subtitle file you can give a relative or absolute path or a filename in the working directory.
   • Filenames must be enclosed in quotes if they contain spaces or other special characters.
   • Do not use \"~\" or \"\$HOME\" to symbolize the home directory. Write the text instead (/home/yourname).
-  • -i (input file) is required in every case.
+  • -i (input file) or -d (input directory) is required in every case.
   • If only -i parameter is used then the subtitle goes through a basic clean-up (empty subtitles are removed etc.)
   • -1 and -2 parameters (adjust time) can be combined (equivalent of using just the -a parameter).
   • -e, -E (replace) and -c (clean trash) parameters work with both srt and sub subtitle files.
@@ -192,7 +196,11 @@ text2+="${cyan}EXAMPLES${normal}
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -i foo.srt -b
-  Same as above, but creates a backup before processing the subtitle.\n\n\n"
+  Same as above, but creates a backup before processing the subtitle.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory
+  Runs Basic clean-up for all subtitle files in directory \"foo_directory\".\n\n\n"
 
 
 text2+="  ${bold}Shift time${normal}
@@ -215,7 +223,11 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -i foo.srt -s z01:38:32,600
-  Calculates and applies the appropriate shift time value so that the last subtitle starts at 01:38:32,600.\n\n\n"
+  Calculates and applies the appropriate shift time value so that the last subtitle starts at 01:38:32,600.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -s 00:00:01,700
+  Shifts time by 1.7 seconds in all .srt subtitle files in directory \"foo_directory\".\n\n\n"
 
 
 text2+="  ${bold}Convert NTSC to PAL${normal}
@@ -227,7 +239,11 @@ text2+="  ${bold}Convert NTSC to PAL${normal}
 text2+="  ${bold}Convert PAL to NTSC${normal}
 
   ${bold}${green}Example $((examplecounter++))${normal}
-  subedit -i foo.srt -n\n\n\n"
+  subedit -i foo.srt -n\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -n
+  Converts the fps in all .srt subtitle files in directory \"foo_directory\" from PAL to NTSC.\n\n\n"
 
 
 text2+="  ${bold}Adjust time${normal}
@@ -299,7 +315,11 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -i foo.sub -t 15.338
-  Assumes that foo.sub is in 15.338 fps and creates a new file foo.srt.\n\n\n"
+  Assumes that foo.sub is in 15.338 fps and creates a new file foo.srt.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -t film
+  Assumes that all .sub subtitle files in \"foo_directory\" are in 23.976 fps and converts them to srt.\n\n\n"
 
 
 text2+="  ${bold}Convert srt to sub${normal}
@@ -395,7 +415,12 @@ text2+="  ${bold}Clean trash${normal}
 
   ${bold}${green}Example $((examplecounter++))${normal}
   subedit -i foo.srt -c
-  Cleans foo.srt.\n\n\n"
+  Cleans foo.srt.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -c -b
+  Cleans all subtitle files in directory \"foo_directory\", and creates a backup for each one
+  before processing them.\n\n\n"
 
 
 text2+="${cyan}ABOUT${normal}
@@ -413,14 +438,15 @@ exit 0
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" opt); then
+if ( ! getopts ":i:d:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" parameter; do
+while getopts ":i:d:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
+		d) inputdirectory=$OPTARG ;;
 		b) backup="True" ;;
 		s) shifttime=$OPTARG ;;
 		p) ntsc2pal="True" ;;
@@ -458,18 +484,18 @@ check_file ()
 {
 	if ! [[ -f "$1" ]]; then
 		echo "Error: \"$1\" not found."
-		exit 1
+		[[ "$inputdirectory" ]] && return 1 || exit 1
 	fi
 
 	if ! [[ -r "$1" ]]; then
 		echo "Error: \"$1\" is not readable."
-		exit 1
+		[[ "$inputdirectory" ]] && return 1 || exit 1
 	fi
 
 	encoding=$(file -b --mime-encoding "$1")
 	if [[ $encoding == "binary" ]] || ! [[ $(file -b "$1") == *"text"* ]] && ! [[ $(file -b "$1") == *"Bio-Rad .PIC Image File"* ]]; then
 		echo "Error: \"$1\" is not a text file or it is UTF-16 without BOM"
-		exit 1
+		[[ "$inputdirectory" ]] && return 1 || exit 1
 	fi
 
 	# Backup input file
@@ -822,7 +848,8 @@ check_srt ()
 	done
 
 	if ! [[ $srtok ]]; then
-		echo "Error: \"$1\" is not a valid srt file"; exit 1
+		echo "Error: \"$1\" is not a valid srt file"
+		[[ "$inputdirectory" ]] && return 1 || exit 1
 	fi
 }
 
@@ -847,7 +874,8 @@ check_sub ()
 	done
 
 	if ! [[ $subok ]]; then
-		echo "Error: \"$1\" is not a valid sub file"; exit 1
+		echo "Error: \"$1\" is not a valid sub file"
+		[[ "$inputdirectory" ]] && return 1 || exit 1
 	fi
 }
 
@@ -895,7 +923,8 @@ check_srt_and_sub ()
 	done
 
 	if ! [[ $subtitleis ]]; then
-		echo "Error: \"$1\" is not a valid srt or sub file"; exit 1
+		echo "Error: \"$1\" is not a valid srt or sub file"
+		[[ "$inputdirectory" ]] && return 1 || exit 1
 	fi
 }
 
@@ -906,13 +935,25 @@ basic_clean_up ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Check if the srt or sub is OK
 	check_srt_and_sub "$inputfilename" "Purifying \"$inputfilename\""
+
+	# Exit this function if the return code of check_srt_and_sub is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	case "$subtitleis" in
 		"srt") read_srt "$inputfilename"; printf "%s\n" "${arraysrt[@]}" > "$inputfilename" ;;
 		"sub") read_sub "$inputfilename"; printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename" ;;
 	esac
+
+	unset subtitleis
 }
 
 
@@ -941,11 +982,21 @@ shift_time ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Read text file to arraysrt
 	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Shifting time of \"$inputfilename\" by $shifttime..."
+
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 
 	# Find shift milliseconds
@@ -1017,7 +1068,7 @@ shift_time ()
 			p2_new=$(($p2 + $p))
 
 			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
-				echo "Error: Negative time not allowed. Check the shifting value."; exit 1
+				echo "Error: Negative time not allowed. Check the shifting value."; return 1
 			fi
 
 			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
@@ -1039,6 +1090,11 @@ change_fps ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Read text file to arraysrt
 	read_srt "$inputfilename"
 
@@ -1049,6 +1105,10 @@ change_fps ()
 		check_srt "$inputfilename" "Changing fps of \"$inputfilename\" from NTSC (23.976 or 29.970) to PAL (25)..."
 	fi
 
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	# Process the array
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
@@ -1123,15 +1183,25 @@ adjust_time ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Read text file to arraysrt
 	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Adjusting time of \"$inputfilename\"..."
 
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Check if the file has only 1 subtitle
 	if ((subcounter == 1)); then
-		echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; exit 1
+		echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; return 1
 	fi
 
 
@@ -1184,15 +1254,15 @@ adjust_time ()
 
 
 	if (( $pa == $pb )); then
-		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; exit 1
+		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; return 1
 	elif (( $pa > $pb )); then
-		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; exit 1
+		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; return 1
 	fi
 
 	if (( $p == $p_ )); then
-		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; exit 1
+		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; return 1
 	elif (( $p > $p_ )); then
-		echo "Error: The first subtitle cannot start after the last subtitle"; exit 1
+		echo "Error: The first subtitle cannot start after the last subtitle"; return 1
 	fi
 
 
@@ -1221,7 +1291,7 @@ adjust_time ()
 			p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
 			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
-				echo "Error: Negative time not allowed. Check the adjusting values."; exit 1
+				echo "Error: Negative time not allowed. Check the adjusting values."; return 1
 			fi
 
 			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
@@ -1243,15 +1313,25 @@ adjust_time_v2 ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Read text file to arraysrt
 	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Adjusting time of \"$inputfilename\"..."
 
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Check if the file has only 1 subtitle
 	if ((subcounter == 1)); then
-		echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; exit 1
+		echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; return 1
 	fi
 
 
@@ -1283,7 +1363,7 @@ adjust_time_v2 ()
 	done
 
 	if (( 10#$m1a >= 60 )) || (( 10#$s1a >= 60 )) || (( 10#$m1b >= 60 )) || (( 10#$s1b >= 60 )); then
-		echo "Error: The first or last subtitle time is invalid."; exit 1
+		echo "Error: The first or last subtitle time is invalid."; return 1
 	fi
 
 	# Time in milliseconds of the start time of the first subtitle
@@ -1346,15 +1426,15 @@ adjust_time_v2 ()
 
 
 	if (( $pa == $pb )); then
-		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; exit 1
+		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; return 1
 	elif (( $pa > $pb )); then
-		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; exit 1
+		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; return 1
 	fi
 
 	if (( $p == $p_ )); then
-		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; exit 1
+		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; return 1
 	elif (( $p > $p_ )); then
-		echo "Error: The first subtitle cannot start after the last subtitle"; exit 1
+		echo "Error: The first subtitle cannot start after the last subtitle"; return 1
 	fi
 
 
@@ -1383,7 +1463,7 @@ adjust_time_v2 ()
 			p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
 			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
-				echo "Error: Negative time not allowed. Check the adjusting values."; exit 1
+				echo "Error: Negative time not allowed. Check the adjusting values."; return 1
 			fi
 
 			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
@@ -1588,6 +1668,11 @@ replace_text ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	if [[ $replace3 ]]; then
 		replace1=$replace3
 		replace2=$replace4
@@ -1606,6 +1691,11 @@ replace_text ()
 
 	# Check if the srt or sub is OK
 	check_srt_and_sub "$inputfilename" "Replacing \"$replace1\" with \"$replace2\" in file \"$inputfilename\""
+
+	# Exit this function if the return code of check_srt_and_sub is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	IFS=$'\n'			# new field separator, the end of line
 
@@ -1683,6 +1773,11 @@ sub2_srt ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Read text file to arraysub
 	read_sub "$inputfilename"
 
@@ -1690,6 +1785,10 @@ sub2_srt ()
 	newfilename="${inputfilename%.*}.srt"
 	check_sub "$inputfilename" "Converting \"$inputfilename\" to \"$newfilename\"..."
 
+	# Exit this function if the return code of check_sub is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	# Process the arraysub and at the same time create the arraysrt
 	arraysrt=()
@@ -1910,7 +2009,7 @@ sub2_srt ()
 	if (( ${#arraysrt[@]} > 2 )); then
 		printf "%s\r\n" "${arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
-		echo "Error: Not a valid sub file"; exit 1
+		echo "Error: Not a valid sub file"; return 1
 	fi
 }
 
@@ -1929,6 +2028,11 @@ srt2_sub ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Read text file to arraysrt
 	read_srt "$inputfilename"
 
@@ -1943,6 +2047,10 @@ srt2_sub ()
 	newfilename="${inputfilename%.*}.sub"
 	check_srt "$inputfilename" "Converting \"$inputfilename\" to \"$newfilename\"..."
 
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	# Remove non necessary lines
 	newarraysrt=()
@@ -2539,7 +2647,7 @@ srt2_sub ()
 	if (( ${#arraysub[@]} >= 1 )); then
 		printf "%s\r\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
-		echo "Error: Not a valid srt file"; exit 1
+		echo "Error: Not a valid srt file"; return 1
 	fi
 	IFS=$old_IFS		# restore default field separator
 }
@@ -2550,6 +2658,11 @@ join_srt ()
 	# Check if the input file is a text
 	check_file "$joinsrt"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Encoding of the join file
 	encodingjoin=$encoding
 
@@ -2559,12 +2672,22 @@ join_srt ()
 	# Check if the srt is OK
 	check_srt "$joinsrt"
 
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Create arraysrtjoin from arraysrt
 	arraysrtjoin+=("${arraysrt[@]}")
 
 
 	# Check if the input file is a text
 	check_file "$inputfilename"
+
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	# Encoding of the input file
 	encodinginput=$encoding
@@ -2574,6 +2697,11 @@ join_srt ()
 
 	# Check if the srt is OK
 	check_srt "$inputfilename"
+
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 
 	# Compare the encodings of the two files and convert to UTF-8 if necessary
@@ -2711,12 +2839,21 @@ split_srt ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Read text file to arraysrt
 	read_srt "$inputfilename"
 
 	# Check if the srt is OK
 	check_srt "$inputfilename" "Splitting \"$inputfilename\"..."
 
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	# Find the first and last subtitle time
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
@@ -2782,11 +2919,11 @@ split_srt ()
 		fi
 
 		if ((p < p1a)); then
-			echo "Error: Split time cannot precede the start time of the first subtitle."; exit 1
+			echo "Error: Split time cannot precede the start time of the first subtitle."; return 1
 		fi
 
 		if ((p > p1b)); then
-			echo "Error: Split time cannot exceed the start time of the last subtitle."; exit 1
+			echo "Error: Split time cannot exceed the start time of the last subtitle."; return 1
 		fi
 
 		# Find the subtitle to make the split
@@ -2824,7 +2961,7 @@ split_srt ()
 
 		# Check if the given integer is OK
 		if ((splitinteger == 0)) || ((splitinteger > ((subcounter-1)))); then
-			echo "Error: The number of subtitles in the file are $subcounter. The given integer must be between or equal to 1 and $((subcounter-1))."; exit 1
+			echo "Error: The number of subtitles in the file are $subcounter. The given integer must be between or equal to 1 and $((subcounter-1))."; return 1
 		fi
 
 		# Create the two new subtitle arrays
@@ -2862,7 +2999,7 @@ split_srt ()
 		fi
 
 		if ((p < p1a)); then
-			echo "Error: Split time cannot precede the start time of the first subtitle."; exit 1
+			echo "Error: Split time cannot precede the start time of the first subtitle."; return 1
 		fi
 
 		# Find the subtitle to make the split
@@ -2995,8 +3132,18 @@ clean_trash ()
 	# Check if the input file is a text
 	check_file "$inputfilename"
 
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
 	# Check if the srt or sub is OK
 	check_srt_and_sub "$inputfilename" "Cleaning \"$inputfilename\""
+
+	# Exit this function if the return code of check_srt_and_sub is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	# If subeditrc exists...
 	unset subeditrcfullpath
@@ -3755,5 +3902,83 @@ if [[ $inputfilename ]]; then
 	else
 		basic_clean_up
 	fi
+	(($? != 0)) && exit 1 || exit 0
+fi
+
+
+if [[ $inputdirectory ]]; then
+	if ! [[ -e $inputdirectory ]]; then
+		echo "Error: \"$inputdirectory\" not found."; exit 1
+	fi
+
+	# Set globbing to case insensitive
+	shopt -s nocaseglob
+
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	# Capture the output of ls to an array
+	if [[ $shifttime ]] || [[ $pal2ntsc ]] || [[ $ntsc2pal ]] || [[ $adjustfirst ]] || [[ $adjustonlyfirst ]] || [[ $adjustonlylast ]] || [[ $srt2sub ]] || [[ $splitsrt ]]; then
+		filesarray=( $(ls "$inputdirectory"/*.srt 2> /dev/null) )
+		echo "${#filesarray[@]} srt files found"
+	elif [[ $sub2srt ]]; then
+		filesarray=( $(ls "$inputdirectory"/*.sub 2> /dev/null) )
+		echo "${#filesarray[@]} sub files found"
+	elif [[ $synchronizefile ]] || [[ $joinsrt ]]; then
+		echo "Error: Synchronize with file and Join srt cannot be used in batch mode."; exit 1
+	else
+		filesarray=( $(ls "$inputdirectory"/*.srt "$inputdirectory"/*.sub 2> /dev/null) )
+		echo "$(printf "%s\n" "${filesarray[@]}" | grep -i "\.srt$" -c) srt & $(printf "%s\n" "${filesarray[@]}" | grep -i "\.sub$" -c) sub files found"
+	fi
+
+	IFS=$old_IFS		# restore default field separator
+
+	# Restore globbing to case sensitive
+	shopt -u nocaseglob
+
+	batchcounter=0
+	numberofsubtitles=${#filesarray[@]}
+	numberofsubtitleslength=${#numberofsubtitles}
+	for inputfilename in "${filesarray[@]}"; do
+		((batchcounter++))
+		batchcounterlength=${#batchcounter}
+		spaceslength=$((numberofsubtitleslength-batchcounterlength))
+		case "$spaceslength" in
+			0) precedingspaces="" ;;
+			1) precedingspaces=" " ;;
+			2) precedingspaces="  " ;;
+			3) precedingspaces="   " ;;
+			?) precedingspaces=$(eval printf "\ %.0s" {1..$spaceslength}) ;;
+		esac
+		printf "${bold}${green}[$precedingspaces$batchcounter/${#filesarray[@]}]${normal} "
+
+		if [[ $shifttime ]]; then
+			shift_time
+		elif [[ $pal2ntsc ]]; then
+			change_fps
+		elif [[ $ntsc2pal ]]; then
+			change_fps
+		elif [[ $adjustfirst ]]; then
+			adjust_time
+		elif [[ $adjustonlyfirst ]]; then
+			adjust_time_v2
+		elif [[ $adjustonlylast ]]; then
+			adjust_time_v2
+		elif [[ $replace1 ]]; then
+			replace_text
+		elif [[ $replace3 ]]; then
+			replace_text
+		elif [[ $sub2srt ]]; then
+			sub2_srt
+		elif [[ $srt2sub ]]; then
+			srt2_sub
+		elif [[ $splitsrt ]]; then
+			split_srt
+		elif [[ $cleantrash ]]; then
+			clean_trash
+		else
+			basic_clean_up
+		fi
+	done
 	exit 0
 fi
