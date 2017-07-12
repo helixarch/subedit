@@ -764,7 +764,7 @@ read_sub ()
 			done
 			IFS=$'\n'
 
-			arraysub+=($line_new)
+			arraysub+=($line_new$cr)
 		fi 2> /dev/null
 	done
 
