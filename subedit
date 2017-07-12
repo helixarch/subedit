@@ -78,10 +78,12 @@ ${cyan}DESCRIPTION${normal}
 ${cyan}PARAMETERS${normal}
   ${bold}-i \"Input file\"${normal}
       Subtitle file to process. Accepts srt or sub files, depending on what other parameter is used.
+      Does not work with -D parameter (synchronize with directory).
 
   ${bold}-d \"Input directory\"${normal}
       Directory containing subtitle files to process. Can contain srt, sub or both subtitle types.
       Works with all parameters except with -y (synchronize with file) and -j (join two srt subtitles).
+      Instead of Synchronize with file you can use Synchronize with directory (-D parameter).
 
   ${bold}-b [Switch]${normal}
       Backup input file. Makes a copy of the input file in the same directory with the .bak sufix.
@@ -114,8 +116,15 @@ ${cyan}PARAMETERS${normal}
       Synchronize with file. The subtitle times of the srt given with -i parameter will be adjusted with
       beginning and end time of this srt.
 
+  ${bold}-D \"Input directory\"${normal}
+      Synchronize with directory. To be used only with -d parameter.
+      This directory contains srt subtitle files with correct times.
+      The two directories (given with -d and -D parameters) must contain srt subtitle files with the same names.
+      Synchronizes each srt subtitle file in the input directory (-d) with the srt subtitle file with the
+      same name that's in the directory (-D).
+
   ${bold}-Y [Switch]${normal}
-      Synchronize subtitle times one by one. Optional switch to be used with -y. Replaces times of file
+      Synchronize subtitle times one by one. Optional switch to be used with -y and -D. Replaces times of file
       to be synchronized with times of synchronization file, respectively.
 
   ${bold}-e \"Text to be replaced\" \"New text\"${normal}
@@ -288,6 +297,20 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   will be replaced with the times of boo.srt.\n\n\n"
 
 
+text2+="  ${bold}Synchronize with directory${normal}
+
+  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -D boo_directory
+  Synchronizes each srt subtitle file in the directory \"foo_directory\" with the srt subtitle file
+  that has the same name that's in the directory \"boo_directory\".\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -D boo_directory -Y
+  Synchronizes each srt subtitle file's times in the directory \"foo_directory\" with the srt
+  subtitle file's times that has the same name that's in the directory \"boo_directory\",
+  respectively.\n\n\n"
+
+
 text2+="  ${bold}Replace text${normal}
 
   ${bold}${green}Example $((examplecounter++))${normal}
@@ -438,12 +461,12 @@ exit 0
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:d:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" opt); then
+if ( ! getopts ":i:d:bs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:d:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" parameter; do
+while getopts ":i:d:bs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		d) inputdirectory=$OPTARG ;;
@@ -457,6 +480,7 @@ while getopts ":i:d:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" parameter; do
 		1) adjustonlyfirst=$OPTARG ;;
 		2) adjustonlylast=$OPTARG ;;
 		y) synchronizefile=$OPTARG ;;
+		D) synchronizedirectory=$OPTARG ;;
 		Y) synchronizetimebytime="True" ;;
 		e)	eval "replace1=\$$((OPTIND-1))"
 			eval "replace2=\$$((OPTIND))"
@@ -1482,14 +1506,37 @@ adjust_time_v2 ()
 
 synchronize_with_file ()
 {
+	if [[ $synchronizedirectory ]]; then
+		synchronizefile="$synchronizedirectory/$(basename "$inputfilename")"
+		if ! [[ -f "$synchronizefile" ]]; then
+			echo "Error: \"$synchronizefile\" not found."
+			return 1
+		fi
+
+		if ! [[ -r "$synchronizefile" ]]; then
+			echo "Error: \"$synchronizefile\" is not readable."
+			return 1
+		fi
+	fi
+
 	# Check if the synchronize file is a text
 	check_file "$synchronizefile"
+
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 	# Read file to synchronize to
 	read_srt "$synchronizefile"
 
 	# Check if the srt is OK
 	check_srt "$synchronizefile"
+
+	# Exit this function if the return code of check_srt is not 0
+	if (($? != 0)); then
+		return 1
+	fi
 
 
 	if ! [[ $synchronizetimebytime ]]; then
@@ -1521,7 +1568,7 @@ synchronize_with_file ()
 		done
 
 		if (( 10#$m >= 60 )) || (( 10#$s >= 60 )) || (( 10#$m_ >= 60 )) || (( 10#$s_ >= 60 )); then
-			echo "Error: The first or last subtitle time of the subtitle you want to synchronize with, is invalid."; exit 1
+			echo "Error: The first or last subtitle time of the subtitle you want to synchronize with, is invalid."; return 1
 		fi
 
 		# Calculate the NEW first and last subtitle
@@ -1529,14 +1576,19 @@ synchronize_with_file ()
 		p_=$(($(($((10#$h_)) * 3600000)) + $(($((10#$m_)) * 60000)) + $(($((10#$s_)) * 1000)) + $((10#$f_))))
 
 		if (( $p == $p_ )); then
-			echo "Error: The first subtitle cannot start at the same time as the last subtitle"; exit 1
+			echo "Error: The first subtitle cannot start at the same time as the last subtitle"; return 1
 		elif (( $p > $p_ )); then
-			echo "Error: The first subtitle cannot start after the last subtitle"; exit 1
+			echo "Error: The first subtitle cannot start after the last subtitle"; return 1
 		fi
 
 
 		# Check if the input file is a text
 		check_file "$inputfilename"
+
+		# Exit this function if the return code of check_file is not 0
+		if (($? != 0)); then
+			return 1
+		fi
 
 		# Read text file to arraysrt
 		read_srt "$inputfilename"
@@ -1544,9 +1596,14 @@ synchronize_with_file ()
 		# Check if the srt is OK
 		check_srt "$inputfilename" "Synchronizing \"$inputfilename\" with \"$synchronizefile\"..."
 
+		# Exit this function if the return code of check_srt is not 0
+		if (($? != 0)); then
+			return 1
+		fi
+
 		# Check if the file has only 1 subtitle
 		if ((subcounter == 1)); then
-			echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; exit 1
+			echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; return 1
 		fi
 
 
@@ -1584,9 +1641,9 @@ synchronize_with_file ()
 		pb=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
 
 		if (( $pa == $pb )); then
-			echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; exit 1
+			echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; return 1
 		elif (( $pa > $pb )); then
-			echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; exit 1
+			echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; return 1
 		fi
 
 
@@ -1615,7 +1672,7 @@ synchronize_with_file ()
 				p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
 				if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
-					echo "Error: Negative time not allowed. Check the adjusting values."; exit 1
+					echo "Error: Negative time not allowed. Check the adjusting values."; return 1
 				fi
 
 				j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
@@ -1639,11 +1696,21 @@ synchronize_with_file ()
 		# Check if the input file is a text
 		check_file "$inputfilename"
 
+		# Exit this function if the return code of check_file is not 0
+		if (($? != 0)); then
+			return 1
+		fi
+
 		# Read text file to arraysrt
 		read_srt "$inputfilename"
 
 		# Check if the srt is OK
 		check_srt "$inputfilename" "Synchronizing \"$inputfilename\" with \"$synchronizefile\"..."
+
+		# Exit this function if the return code of check_srt is not 0
+		if (($? != 0)); then
+			return 1
+		fi
 
 		counter=0
 		for ((i=0; i<=${#arraysrt[@]}; i++)); do
@@ -3918,14 +3985,15 @@ if [[ $inputdirectory ]]; then
 	IFS=$'\n'			# new field separator, the end of line
 
 	# Capture the output of ls to an array
-	if [[ $shifttime ]] || [[ $pal2ntsc ]] || [[ $ntsc2pal ]] || [[ $adjustfirst ]] || [[ $adjustonlyfirst ]] || [[ $adjustonlylast ]] || [[ $srt2sub ]] || [[ $splitsrt ]]; then
+	if [[ $shifttime ]] || [[ $pal2ntsc ]] || [[ $ntsc2pal ]] || [[ $adjustfirst ]] || [[ $adjustonlyfirst ]] || [[ $adjustonlylast ]] || [[ $synchronizedirectory ]] || [[ $srt2sub ]] || [[ $splitsrt ]]; then
 		filesarray=( $(ls "$inputdirectory"/*.srt 2> /dev/null) )
 		echo "${#filesarray[@]} srt files found"
 	elif [[ $sub2srt ]]; then
 		filesarray=( $(ls "$inputdirectory"/*.sub 2> /dev/null) )
 		echo "${#filesarray[@]} sub files found"
 	elif [[ $synchronizefile ]] || [[ $joinsrt ]]; then
-		echo "Error: Synchronize with file and Join srt cannot be used in batch mode."; exit 1
+		echo "Error: Synchronize with file and Join srt cannot be used in batch mode."
+		echo "Instead of Synchronize with file you can use Synchronize with directory (-D parameter)."; exit 1
 	else
 		filesarray=( $(ls "$inputdirectory"/*.srt "$inputdirectory"/*.sub 2> /dev/null) )
 		echo "$(printf "%s\n" "${filesarray[@]}" | grep -i "\.srt$" -c) srt & $(printf "%s\n" "${filesarray[@]}" | grep -i "\.sub$" -c) sub files found"
@@ -3964,6 +4032,8 @@ if [[ $inputdirectory ]]; then
 			adjust_time_v2
 		elif [[ $adjustonlylast ]]; then
 			adjust_time_v2
+		elif [[ $synchronizedirectory ]]; then
+			synchronize_with_file
 		elif [[ $replace1 ]]; then
 			replace_text
 		elif [[ $replace3 ]]; then
