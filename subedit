@@ -79,6 +79,10 @@ ${cyan}PARAMETERS${normal}
   ${bold}-i \"Input file\"${normal}
       Subtitle file to process. Accepts srt or sub files, depending on what other parameter is used.
 
+  ${bold}-b [Switch]${normal}
+      Backup input file. Makes a copy of the input file in the same directory with the .bak sufix.
+      If the backup already exists, it does nothing. Can be used with any other parameter.
+
   ${bold}-s (+/-/a/z)hh:mm:ss,fff${normal}
       Shift time. Plus sign (or no sign at all) adds time, where the minus sign subtracts time.
       \"a\" and \"z\" indicate absolute time value for the beginning and end time of the subtitle file
@@ -184,7 +188,11 @@ text2+="${cyan}EXAMPLES${normal}
 
   ${bold}${green}Example $((exmpl=examplecounter++))${normal}
   subedit -i foo.srt
-  Removes empty subtitles, duplicate subtitles and extra empty lines, fixes subtitles' indexes, etc.\n\n\n"
+  Removes empty subtitles, duplicate subtitles and extra empty lines, fixes subtitles' indexes, etc.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -b
+  Same as above, but creates a backup before processing the subtitle.\n\n\n"
 
 
 text2+="  ${bold}Shift time${normal}
@@ -405,14 +413,15 @@ exit 0
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" opt); then
+if ( ! getopts ":i:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:s:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" parameter; do
+while getopts ":i:bs:pna:1:2:y:Ye:E:t:u:U:j:J:x:XchH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
+		b) backup="True" ;;
 		s) shifttime=$OPTARG ;;
 		p) ntsc2pal="True" ;;
 		n) pal2ntsc="True" ;;
@@ -461,6 +470,11 @@ check_file ()
 	if [[ $encoding == "binary" ]] || ! [[ $(file -b "$1") == *"text"* ]] && ! [[ $(file -b "$1") == *"Bio-Rad .PIC Image File"* ]]; then
 		echo "Error: \"$1\" is not a text file or it is UTF-16 without BOM"
 		exit 1
+	fi
+
+	# Backup input file
+	if [[ $backup ]] && [[ "$1" == "$inputfilename" ]] && ! [[ -f "$1.bak" ]]; then
+		cp "$1" "$1.bak" 2> /dev/null
 	fi
 
 	# Detect encoding of input file
