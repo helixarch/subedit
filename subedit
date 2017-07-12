@@ -78,12 +78,15 @@ ${cyan}DESCRIPTION${normal}
 ${cyan}PARAMETERS${normal}
   ${bold}-i \"Input file\"${normal}
       Subtitle file to process. Accepts srt or sub files, depending on what other parameter is used.
-      Does not work with -D parameter (synchronize with directory).
+      Does not work with -D parameter (synchronize with directory) and -r parameter (recurse).
 
   ${bold}-d \"Input directory\"${normal}
       Directory containing subtitle files to process. Can contain srt, sub or both subtitle types.
       Works with all parameters except with -y (synchronize with file) and -j (join two srt subtitles).
       Instead of Synchronize with file you can use Synchronize with directory (-D parameter).
+
+  ${bold}-r [Switch]${normal}
+      Searches recursively for subtitle files in directory given with -d parameter.
 
   ${bold}-b [Switch]${normal}
       Backup input file. Makes a copy of the input file in the same directory with the .bak sufix.
@@ -209,7 +212,11 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -d foo_directory
-  Runs Basic clean-up for all subtitle files in directory \"foo_directory\".\n\n\n"
+  Runs Basic clean-up for all subtitle files in directory \"foo_directory\".\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -r
+  Same as above, but also processes subtitles found in subdirectories (unlimited depth) as well.\n\n\n"
 
 
 text2+="  ${bold}Shift time${normal}
@@ -252,7 +259,11 @@ text2+="  ${bold}Convert PAL to NTSC${normal}
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -d foo_directory -n
-  Converts the fps in all .srt subtitle files in directory \"foo_directory\" from PAL to NTSC.\n\n\n"
+  Converts the fps in all .srt subtitle files in directory \"foo_directory\" from PAL to NTSC.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -r -n
+  Same as above, but also processes subtitles found in subdirectories (unlimited depth) as well.\n\n\n"
 
 
 text2+="  ${bold}Adjust time${normal}
@@ -443,7 +454,11 @@ text2+="  ${bold}Clean trash${normal}
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -d foo_directory -c -b
   Cleans all subtitle files in directory \"foo_directory\", and creates a backup for each one
-  before processing them.\n\n\n"
+  before processing them.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -c -r -b
+  Same as above, but also processes subtitles found in subdirectories (unlimited depth) as well.\n\n\n"
 
 
 text2+="${cyan}ABOUT${normal}
@@ -461,15 +476,16 @@ exit 0
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:d:bs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" opt); then
+if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:d:bs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" parameter; do
+while getopts ":i:d:rbs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		d) inputdirectory=$OPTARG ;;
+		r) recurse="True" ;;
 		b) backup="True" ;;
 		s) shifttime=$OPTARG ;;
 		p) ntsc2pal="True" ;;
@@ -3986,16 +4002,28 @@ if [[ $inputdirectory ]]; then
 
 	# Capture the output of ls to an array
 	if [[ $shifttime ]] || [[ $pal2ntsc ]] || [[ $ntsc2pal ]] || [[ $adjustfirst ]] || [[ $adjustonlyfirst ]] || [[ $adjustonlylast ]] || [[ $synchronizedirectory ]] || [[ $srt2sub ]] || [[ $splitsrt ]]; then
-		filesarray=( $(ls "$inputdirectory"/*.srt 2> /dev/null) )
+		if [[ $recurse ]]; then
+			filesarray=( $(find "$inputdirectory" -type f -iname "*.srt" 2> /dev/null | sort) )
+		else
+			filesarray=( $(ls "$inputdirectory"/*.srt 2> /dev/null) )
+		fi
 		echo "${#filesarray[@]} srt files found"
 	elif [[ $sub2srt ]]; then
-		filesarray=( $(ls "$inputdirectory"/*.sub 2> /dev/null) )
+		if [[ $recurse ]]; then
+			filesarray=( $(find "$inputdirectory" -type f -iname "*.sub" 2> /dev/null | sort) )
+		else
+			filesarray=( $(ls "$inputdirectory"/*.sub 2> /dev/null) )
+		fi
 		echo "${#filesarray[@]} sub files found"
 	elif [[ $synchronizefile ]] || [[ $joinsrt ]]; then
 		echo "Error: Synchronize with file and Join srt cannot be used in batch mode."
 		echo "Instead of Synchronize with file you can use Synchronize with directory (-D parameter)."; exit 1
 	else
-		filesarray=( $(ls "$inputdirectory"/*.srt "$inputdirectory"/*.sub 2> /dev/null) )
+		if [[ $recurse ]]; then
+			filesarray=( $(find "$inputdirectory" -type f -iname "*.srt" -o -iname "*.sub" 2> /dev/null | sort) )
+		else
+			filesarray=( $(ls "$inputdirectory"/*.srt "$inputdirectory"/*.sub 2> /dev/null) )
+		fi
 		echo "$(printf "%s\n" "${filesarray[@]}" | grep -i "\.srt$" -c) srt & $(printf "%s\n" "${filesarray[@]}" | grep -i "\.sub$" -c) sub files found"
 	fi
 
