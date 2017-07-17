@@ -42,7 +42,7 @@ if ! [[ -x "$(command -v file)" ]]; then
 fi
 
 if ! [[ -x "$(command -v uchardet)" ]]; then
-	echo "Warning: \"uchardet\" is not installed. Uchardet improves input file's encoding detection but is not mandatory for subedit to run."
+	echo "${bold}${red}Warning: \"uchardet\" is not installed. Uchardet improves input file's encoding detection but is not mandatory for subedit to run.${normal}"
 fi
 
 # Define carriage return and new line
@@ -1001,7 +1001,7 @@ check_srt ()
 	# Check the file extension
 	extension="${1##*.}"
 	if [[ "${extension,,}" != "srt" ]]; then
-		echo "Warning: \"$1\" does not have '.srt' extension"
+		echo "${bold}${red}Warning: \"$1\" does not have '.srt' extension${normal}"
 	fi
 
 	srtok=""
@@ -1015,7 +1015,7 @@ check_srt ()
 
 	if ! [[ $srtok ]]; then
 		if ! [[ -r "$1.bak" ]]; then
-			echo "Warning: \"$1.bak\" is not readable"
+			echo "${bold}${red}Warning: \"$1.bak\" is not readable${normal}"
 		fi
 		if [[ $backup ]]; then
 			cp "$1.bak" "$1" 2> /dev/null
@@ -1035,7 +1035,7 @@ check_sub ()
 	# Check the file extension
 	extension="${1##*.}"
 	if [[ "${extension,,}" != "sub" ]]; then
-		echo "Warning: \"$1\" does not have '.sub' extension"
+		echo "${bold}${red}Warning: \"$1\" does not have '.sub' extension${normal}"
 	fi
 
 	subok=""
@@ -1051,7 +1051,7 @@ check_sub ()
 
 	if ! [[ $subok ]]; then
 		if ! [[ -r "$1.bak" ]]; then
-			echo "Warning: \"$1.bak\" is not readable"
+			echo "${bold}${red}Warning: \"$1.bak\" is not readable${normal}"
 		fi
 		if [[ $backup ]]; then
 			cp "$1.bak" "$1" 2> /dev/null
@@ -1093,7 +1093,7 @@ check_srt_and_sub ()
 			# Check the file extension
 			extension="${1##*.}"
 			if [[ "${extension,,}" != "sub" ]]; then
-				echo "Warning: \"$1\" does not have '.sub' extension"
+				echo "${bold}${red}Warning: \"$1\" does not have '.sub' extension${normal}"
 			fi
 			break
 		elif [[ ${array[$i]} =~ $regextime ]]; then
@@ -1102,7 +1102,7 @@ check_srt_and_sub ()
 			# Check the file extension
 			extension="${1##*.}"
 			if [[ "${extension,,}" != "srt" ]]; then
-				echo "Warning: \"$1\" does not have '.srt' extension"
+				echo "${bold}${red}Warning: \"$1\" does not have '.srt' extension${normal}"
 			fi
 			break
 		fi
@@ -1980,7 +1980,7 @@ replace_text ()
 					printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
 				else
 					printf "%s\n" "${temparray[@]}" > "$inputfilename"
-					echo "Warning: \"$inputfilename\" has been saved with UTF-8 encoding"
+					echo "${bold}${red}Warning: \"$inputfilename\" has been saved with UTF-8 encoding${normal}"
 				fi
 				unset temparray ;;
 			"sub")
@@ -1992,7 +1992,7 @@ replace_text ()
 					printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
 				else
 					printf "%s\n" "${temparray[@]}" > "$inputfilename"
-					echo "Warning: \"$inputfilename\" has been saved with UTF-8 encoding"
+					echo "${bold}${red}Warning: \"$inputfilename\" has been saved with UTF-8 encoding${normal}"
 				fi
 				unset temparray ;;
 		esac
@@ -2007,7 +2007,7 @@ replace_text ()
 					printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
 				else
 					printf "%s\n" "${temparray[@]}" > "$inputfilename"
-					echo "Warning: \"$inputfilename\" has been saved with UTF-8 encoding"
+					echo "${bold}${red}Warning: \"$inputfilename\" has been saved with UTF-8 encoding${normal}"
 				fi
 				unset temparray ;;
 			"sub")
@@ -2019,7 +2019,7 @@ replace_text ()
 					printf "%s\n" "${temparray[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
 				else
 					printf "%s\n" "${temparray[@]}" > "$inputfilename"
-					echo "Warning: \"$inputfilename\" has been saved with UTF-8 encoding"
+					echo "${bold}${red}Warning: \"$inputfilename\" has been saved with UTF-8 encoding${normal}"
 				fi
 				unset temparray ;;
 		esac
@@ -2977,7 +2977,7 @@ join_srt ()
 	# Compare the encodings of the two files and convert to UTF-8 if necessary
 	if [[ ${encodinginput,,} != ${encodingjoin,,} ]]; then
 		IFS=$'\n'
-		echo "Warning: The two files have different encodings (${encodinginput^^} and ${encodingjoin^^}). The output file will be UTF-8."
+		echo "${bold}${red}Warning: The two files have different encodings (${encodinginput^^} and ${encodingjoin^^}). The output file will be UTF-8.${normal}"
 		if [[ ${encodinginput,,} != "utf-8" ]]; then
 			temparraysrt=( $(printf "%s\n" "${arraysrt[@]}" | iconv -f $encodinginput -t utf-8) )
 			unset arraysrt
@@ -3719,7 +3719,7 @@ clean_trash ()
 
 				# Check if time is invalid
 				if (( 10#$m1 >= 60 )) || (( 10#$s1 >= 60 )) || (( 10#$m2 >= 60 )) || (( 10#$s2 >= 60 )); then
-					echo "Warning: Invalid time found: $line"
+					echo "${bold}${red}Warning: Invalid time found: $line${normal}"
 				fi
 
 				if [[ $h1$m1$s1$f1 == $h2$m2$s2$f2 ]]; then
