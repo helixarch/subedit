@@ -205,7 +205,8 @@ ${cyan}PARAMETERS${normal}
 examplecounter=1
 
 text2="${cyan}NOTES${normal}
-  • If the argument is a subtitle file you can give a relative or absolute path or a filename in the working directory.
+  • If the argument is a subtitle file or a directory you can give a relative or absolute path or a name
+  in the working directory.
   • Filenames must be enclosed in quotes if they contain spaces or other special characters (including wildcards).
   • Do not use \"~\" or \"\$HOME\" to symbolize the home directory. Write the text instead (/home/yourname).
   • -i (input file) or -d (input directory) is required in every case.
