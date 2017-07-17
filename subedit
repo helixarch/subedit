@@ -90,7 +90,8 @@ ${cyan}PARAMETERS${normal}
 
   ${bold}-b [Switch]${normal}
       Backup input file. Makes a copy of the input file in the same directory with the .bak sufix.
-      If the backup already exists, it does nothing. Can be used with any other parameter.
+      If the backup already exists, it does nothing. If -b is not set and the backup file exists, it is removed.
+      Can be used with any other parameter.
 
   ${bold}-s (+/-/a/z)hh:mm:ss,fff${normal}
       Shift time. Plus sign (or no sign at all) adds time, where the minus sign subtracts time.
@@ -596,6 +597,12 @@ check_file ()
 		[[ "$inputdirectory" ]] && return 1 || exit 1
 	fi
 
+	# Check the file extension and create backup if it's not srt or sub
+	extension="${1##*.}"
+	if [[ "${extension,,}" != "srt" ]] && [[ "${extension,,}" != "sub" ]]; then
+		cp "$1" "$1.bak" 2> /dev/null
+	fi
+
 	# Backup input file
 	if [[ $backup ]] && [[ "$1" == "$inputfilename" ]] && ! [[ -f "$1.bak" ]]; then
 		cp "$1" "$1.bak" 2> /dev/null
@@ -946,8 +953,18 @@ check_srt ()
 	done
 
 	if ! [[ $srtok ]]; then
+		if ! [[ -r "$1.bak" ]]; then
+			echo "Warning: \"$1.bak\" is not readable"
+		fi
+		if [[ $backup ]]; then
+			cp "$1.bak" "$1" 2> /dev/null
+		else
+			mv "$1.bak" "$1" 2> /dev/null
+		fi
 		echo "Error: \"$1\" is not a valid srt file"
 		[[ "$inputdirectory" ]] && return 1 || exit 1
+	elif ! [[ $backup ]]; then
+		rm -f "$1.bak" 2> /dev/null
 	fi
 }
 
@@ -972,8 +989,18 @@ check_sub ()
 	done
 
 	if ! [[ $subok ]]; then
+		if ! [[ -r "$1.bak" ]]; then
+			echo "Warning: \"$1.bak\" is not readable"
+		fi
+		if [[ $backup ]]; then
+			cp "$1.bak" "$1" 2> /dev/null
+		else
+			mv "$1.bak" "$1" 2> /dev/null
+		fi
 		echo "Error: \"$1\" is not a valid sub file"
 		[[ "$inputdirectory" ]] && return 1 || exit 1
+	elif ! [[ $backup ]]; then
+		rm -f "$1.bak" 2> /dev/null
 	fi
 }
 
@@ -1021,8 +1048,11 @@ check_srt_and_sub ()
 	done
 
 	if ! [[ $subtitleis ]]; then
+		mv "$1.bak" "$1" 2> /dev/null
 		echo "Error: \"$1\" is not a valid srt or sub file"
 		[[ "$inputdirectory" ]] && return 1 || exit 1
+	elif ! [[ $backup ]]; then
+		rm -f "$1.bak" 2> /dev/null
 	fi
 }
 
