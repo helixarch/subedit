@@ -130,6 +130,12 @@ ${cyan}PARAMETERS${normal}
       Synchronize subtitle times one by one. Optional switch to be used with -y and -D. Replaces times of file
       to be synchronized with times of synchronization file, respectively.
 
+  ${bold}-f \"Find text\"${normal}
+      Search, case insensitive. The double quotes are necessary. Works with srt and sub.
+
+  ${bold}-F \"Find text\"${normal}
+      Search, case sensitive. The double quotes are necessary. Works with srt and sub.
+
   ${bold}-e \"Text to be replaced\" \"New text\"${normal}
       Replace, case insensitive. The double quotes are necessary. Works with srt and sub.
 
@@ -195,7 +201,7 @@ text2="${cyan}NOTES${normal}
   • -i (input file) or -d (input directory) is required in every case.
   • If only -i parameter is used then the subtitle goes through a basic clean-up (empty subtitles are removed etc.)
   • -1 and -2 parameters (adjust time) can be combined (equivalent of using just the -a parameter).
-  • -e, -E (replace) and -c (clean trash) parameters work with both srt and sub subtitle files.
+  • -f, -F (find), -e, -E (replace) and -c (clean trash) parameters work with both srt and sub subtitle files.
   • Bellow you'll find examples for every parameter.\n\n\n"
 
 
@@ -320,6 +326,17 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   Synchronizes each srt subtitle file's times in the directory \"foo_directory\" with the srt
   subtitle file's times that has the same name that's in the directory \"boo_directory\",
   respectively.\n\n\n"
+
+
+text2+="  ${bold}Find text${normal}
+
+  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -f \"Whatever you want\"
+  Searches text \"whatever you want\" (case insensitive) and prints the lines that contain it.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -F \"Name, please.\"
+  Searches text \"Name, please.\" (case sensitive) and prints the lines that contain it.\n\n\n"
 
 
 text2+="  ${bold}Replace text${normal}
@@ -476,12 +493,12 @@ exit 0
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" opt); then
+if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:XchH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:d:rbs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" parameter; do
+while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:XchH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		d) inputdirectory=$OPTARG ;;
@@ -498,6 +515,8 @@ while getopts ":i:d:rbs:pna:1:2:y:D:Ye:E:t:u:U:j:J:x:XchH" parameter; do
 		y) synchronizefile=$OPTARG ;;
 		D) synchronizedirectory=$OPTARG ;;
 		Y) synchronizetimebytime="True" ;;
+		f) findci=$OPTARG ;;
+		F) findcs=$OPTARG ;;
 		e)	eval "replace1=\$$((OPTIND-1))"
 			eval "replace2=\$$((OPTIND))"
 			((OPTIND++)) ;;
@@ -1743,6 +1762,44 @@ synchronize_with_file ()
 
 	# Write to the txt file the contents of array.
 	printf "%s\n" "${arraysrt[@]}" > "$inputfilename"
+}
+
+
+find_text ()
+{
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
+	if [[ $findci ]]; then
+		find=$findci
+	elif [[ $findcs ]]; then
+		find=$findcs
+	fi
+
+	# Check if the srt or sub is OK
+	check_srt_and_sub "$inputfilename"
+	echo -e "Finding \"$find\" in file \"$inputfilename\""
+
+	# Exit this function if the return code of check_srt_and_sub is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
+	old_IFS=$IFS		# save the field separator
+	IFS=$'\n'			# new field separator, the end of line
+
+	if [[ $findci ]]; then
+		iconv -f $encoding -t utf-8 "$inputfilename" 2> /dev/null | grep $find -ni | sed s'/:/: /' | while read -r line; do echo "line $line"; done
+	else
+		iconv -f $encoding -t utf-8 "$inputfilename" 2> /dev/null | grep $find -n | sed s'/:/: /' | while read -r line; do echo "line $line"; done
+	fi
+
+	IFS=$old_IFS		# restore default field separator
 }
 
 
@@ -3968,6 +4025,10 @@ if [[ $inputfilename ]]; then
 		adjust_time_v2
 	elif [[ $synchronizefile ]]; then
 		synchronize_with_file
+	elif [[ $findci ]]; then
+		find_text
+	elif [[ $findcs ]]; then
+		find_text
 	elif [[ $replace1 ]]; then
 		replace_text
 	elif [[ $replace3 ]]; then
@@ -4062,6 +4123,10 @@ if [[ $inputdirectory ]]; then
 			adjust_time_v2
 		elif [[ $synchronizedirectory ]]; then
 			synchronize_with_file
+		elif [[ $findci ]]; then
+			find_text
+		elif [[ $findcs ]]; then
+			find_text
 		elif [[ $replace1 ]]; then
 			replace_text
 		elif [[ $replace3 ]]; then
