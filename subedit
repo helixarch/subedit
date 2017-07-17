@@ -202,6 +202,7 @@ text2="${cyan}NOTES${normal}
   • If only -i parameter is used then the subtitle goes through a basic clean-up (empty subtitles are removed etc.)
   • -1 and -2 parameters (adjust time) can be combined (equivalent of using just the -a parameter).
   • -f, -F (find), -e, -E (replace) and -c (clean trash) parameters work with both srt and sub subtitle files.
+  • You can put different parameters in the same command and they'll run one after the other.
   • Bellow you'll find examples for every parameter.\n\n\n"
 
 
@@ -4012,41 +4013,55 @@ clean_trash ()
 
 if [[ $inputfilename ]]; then
 	if [[ $shifttime ]]; then
-		shift_time
-	elif [[ $pal2ntsc ]]; then
-		change_fps
-	elif [[ $ntsc2pal ]]; then
-		change_fps
-	elif [[ $adjustfirst ]]; then
-		adjust_time
-	elif [[ $adjustonlyfirst ]]; then
-		adjust_time_v2
-	elif [[ $adjustonlylast ]]; then
-		adjust_time_v2
-	elif [[ $synchronizefile ]]; then
-		synchronize_with_file
-	elif [[ $findci ]]; then
-		find_text
-	elif [[ $findcs ]]; then
-		find_text
-	elif [[ $replace1 ]]; then
-		replace_text
-	elif [[ $replace3 ]]; then
-		replace_text
-	elif [[ $sub2srt ]]; then
-		sub2_srt
-	elif [[ $srt2sub ]]; then
-		srt2_sub
-	elif [[ $joinsrt ]]; then
-		join_srt
-	elif [[ $splitsrt ]]; then
-		split_srt
-	elif [[ $cleantrash ]]; then
-		clean_trash
-	else
-		basic_clean_up
+		shift_time; (($? != 0)) && exit 1
 	fi
-	(($? != 0)) && exit 1 || exit 0
+
+	if [[ $pal2ntsc ]] || [[ $ntsc2pal ]]; then
+		change_fps; (($? != 0)) && exit 1
+	fi
+
+	if [[ $adjustfirst ]]; then
+		adjust_time; (($? != 0)) && exit 1
+	fi
+
+	if [[ $adjustonlyfirst ]] || [[ $adjustonlylast ]]; then
+		adjust_time_v2; (($? != 0)) && exit 1
+	fi
+
+	if [[ $synchronizefile ]]; then
+		synchronize_with_file; (($? != 0)) && exit 1
+	fi
+
+	if [[ $findci ]] || [[ $findcs ]]; then
+		find_text; (($? != 0)) && exit 1
+	fi
+
+	if [[ $replace1 ]] || [[ $replace3 ]]; then
+		replace_text; (($? != 0)) && exit 1
+	fi
+
+	if [[ $sub2srt ]]; then
+		sub2_srt; (($? != 0)) && exit 1
+	elif [[ $srt2sub ]]; then
+		srt2_sub; (($? != 0)) && exit 1
+	fi
+
+	if [[ $joinsrt ]]; then
+		join_srt; (($? != 0)) && exit 1
+	fi
+
+	if [[ $splitsrt ]]; then
+		split_srt; (($? != 0)) && exit 1
+	fi
+
+	if [[ $cleantrash ]]; then
+		clean_trash; (($? != 0)) && exit 1
+	fi
+
+	if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
+		basic_clean_up; (($? != 0)) && exit 1
+	fi
+	exit 0
 fi
 
 
@@ -4111,35 +4126,47 @@ if [[ $inputdirectory ]]; then
 
 		if [[ $shifttime ]]; then
 			shift_time
-		elif [[ $pal2ntsc ]]; then
+		fi
+
+		if [[ $pal2ntsc ]] || [[ $ntsc2pal ]]; then
 			change_fps
-		elif [[ $ntsc2pal ]]; then
-			change_fps
-		elif [[ $adjustfirst ]]; then
+		fi
+
+		if [[ $adjustfirst ]]; then
 			adjust_time
-		elif [[ $adjustonlyfirst ]]; then
+		fi
+
+		if [[ $adjustonlyfirst ]] || [[ $adjustonlylast ]]; then
 			adjust_time_v2
-		elif [[ $adjustonlylast ]]; then
-			adjust_time_v2
-		elif [[ $synchronizedirectory ]]; then
+		fi
+
+		if [[ $synchronizedirectory ]]; then
 			synchronize_with_file
-		elif [[ $findci ]]; then
+		fi
+
+		if [[ $findci ]] || [[ $findcs ]]; then
 			find_text
-		elif [[ $findcs ]]; then
-			find_text
-		elif [[ $replace1 ]]; then
+		fi
+
+		if [[ $replace1 ]] || [[ $replace3 ]]; then
 			replace_text
-		elif [[ $replace3 ]]; then
-			replace_text
-		elif [[ $sub2srt ]]; then
+		fi
+
+		if [[ $sub2srt ]]; then
 			sub2_srt
 		elif [[ $srt2sub ]]; then
 			srt2_sub
-		elif [[ $splitsrt ]]; then
+		fi
+
+		if [[ $splitsrt ]]; then
 			split_srt
-		elif [[ $cleantrash ]]; then
+		fi
+
+		if [[ $cleantrash ]]; then
 			clean_trash
-		else
+		fi
+
+		if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
 			basic_clean_up
 		fi
 	done
