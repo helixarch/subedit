@@ -18,6 +18,7 @@
 
 
 # Define colors and bold letters
+red=$(tput setaf 1)
 green=$(tput setaf 2)
 cyan=$(tput setaf 6)
 bold=$(tput bold)
@@ -25,19 +26,19 @@ normal=$(tput sgr0)
 
 # Check if dos2unix, unix2dos, iconv, file and uchardet programs exist.
 if ! [[ -x "$(command -v dos2unix)" ]]; then
-	echo "Error: \"dos2unix\" is not installed. Exiting."; exit 1
+	echo "${red}Error: \"dos2unix\" is not installed. Exiting.${normal}"; exit 1
 fi
 
 if ! [[ -x "$(command -v unix2dos)" ]]; then
-	echo "Error: \"unix2dos\" is not installed. Exiting."; exit 1
+	echo "${red}Error: \"unix2dos\" is not installed. Exiting.${normal}"; exit 1
 fi
 
 if ! [[ -x "$(command -v iconv)" ]]; then
-	echo "Error: \"iconv\" is not installed. Exiting."; exit 1
+	echo "${red}Error: \"iconv\" is not installed. Exiting.${normal}"; exit 1
 fi
 
 if ! [[ -x "$(command -v file)" ]]; then
-	echo "Error: \"file\" is not installed. Exiting."; exit 1
+	echo "${red}Error: \"file\" is not installed. Exiting.${normal}"; exit 1
 fi
 
 if ! [[ -x "$(command -v uchardet)" ]]; then
@@ -628,27 +629,32 @@ while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:mhH" parameter; do
 		m) fixerrors="True" ;;
 		h) get_help ;;
 		H) longhelp="True"; get_help ;;
-		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
+		?) echo -e "${red}Error: Parameter -$OPTARG is unknown or an argument is missing.${normal}\nTry 'subedit -h' for more information."; exit 1 ;;
 	esac
 done
+
+if ! [[ $inputfilename ]] && ! [[ $inputdirectory ]]; then
+	echo -e "${red}Error: -i (input file) or -d (input directory) is required in every case${normal}\nTry 'subedit -h' for more information."
+	exit 1
+fi
 
 
 ### Helper functions
 check_file ()
 {
 	if ! [[ -f "$1" ]]; then
-		echo "Error: \"$1\" not found."
+		echo "${red}Error: \"$1\" not found.${normal}"
 		return 1
 	fi
 
 	if ! [[ -r "$1" ]]; then
-		echo "Error: \"$1\" is not readable."
+		echo "${red}Error: \"$1\" is not readable.${normal}"
 		return 1
 	fi
 
 	encoding=$(file -b --mime-encoding "$1")
 	if [[ $encoding == "binary" ]] || ! [[ $(file -b "$1") == *"text"* ]] && ! [[ $(file -b "$1") == *"Bio-Rad .PIC Image File"* ]]; then
-		echo "Error: \"$1\" is not a text file or it is UTF-16 without BOM"
+		echo "${red}Error: \"$1\" is not a text file or it is UTF-16 without BOM${normal}"
 		return 1
 	fi
 
@@ -1016,7 +1022,7 @@ check_srt ()
 		else
 			mv "$1.bak" "$1" 2> /dev/null
 		fi
-		echo "Error: \"$1\" is not a valid srt file"
+		echo "${red}Error: \"$1\" is not a valid srt file${normal}"
 		return 1
 	elif ! [[ $backup ]]; then
 		rm -f "$1.bak" 2> /dev/null
@@ -1052,7 +1058,7 @@ check_sub ()
 		else
 			mv "$1.bak" "$1" 2> /dev/null
 		fi
-		echo "Error: \"$1\" is not a valid sub file"
+		echo "${red}Error: \"$1\" is not a valid sub file${normal}"
 		return 1
 	elif ! [[ $backup ]]; then
 		rm -f "$1.bak" 2> /dev/null
@@ -1104,7 +1110,7 @@ check_srt_and_sub ()
 
 	if ! [[ $subtitleis ]]; then
 		mv "$1.bak" "$1" 2> /dev/null
-		echo "Error: \"$1\" is not a valid srt or sub file"
+		echo "${red}Error: \"$1\" is not a valid srt or sub file${normal}"
 		return 1
 	elif ! [[ $backup ]]; then
 		rm -f "$1.bak" 2> /dev/null
@@ -1152,11 +1158,11 @@ shift_time ()
 		s="${BASH_REMATCH[4]}"
 		f="${BASH_REMATCH[5]}"
 	else
-		echo "Error: Syntax must be like '(+/-/a/z)hh:mm:ss,fff'"; exit 1
+		echo "${red}Error: Syntax must be like '(+/-/a/z)hh:mm:ss,fff'${normal}"; exit 1
 	fi
 
 	if (( 10#$m >= 60 )) || (( 10#$s >= 60 )); then
-		echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+		echo "${red}Error: Minutes and seconds must take a value of less than 60${normal}"; exit 1
 	fi
 
 	givenms=$(($(($((10#$h)) * 3600000)) + $(($((10#$m)) * 60000)) + $(($((10#$s)) * 1000)) + $((10#$f))))
@@ -1251,7 +1257,7 @@ shift_time ()
 			p2_new=$(($p2 + $p))
 
 			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
-				echo "Error: Negative time not allowed. Check the shifting value."; return 1
+				echo "${red}Error: Negative time not allowed. Check the shifting value.${normal}"; return 1
 			fi
 
 			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
@@ -1345,7 +1351,7 @@ adjust_time ()
 		s="${BASH_REMATCH[4]}"
 		f="${BASH_REMATCH[5]}"
 	else
-		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff (+/-)hh:mm:ss,fff'"; exit 1
+		echo "${red}Error: Syntax must be like '(+/-)hh:mm:ss,fff (+/-)hh:mm:ss,fff'${normal}"; exit 1
 	fi
 
 	if [[ $adjustlast =~ $regexadjust ]]; then
@@ -1355,11 +1361,11 @@ adjust_time ()
 		s_="${BASH_REMATCH[4]}"
 		f_="${BASH_REMATCH[5]}"
 	else
-		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff (+/-)hh:mm:ss,fff'"; exit 1
+		echo "${red}Error: Syntax must be like '(+/-)hh:mm:ss,fff (+/-)hh:mm:ss,fff'${normal}"; exit 1
 	fi
 
 	if (( 10#$m >= 60 )) || (( 10#$s >= 60 )) || (( 10#$m_ >= 60 )) || (( 10#$s_ >= 60 )); then
-		echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+		echo "${red}Error: Minutes and seconds must take a value of less than 60${normal}"; exit 1
 	fi
 
 
@@ -1384,7 +1390,7 @@ adjust_time ()
 
 	# Check if the file has only 1 subtitle
 	if ((subcounter == 1)); then
-		echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; return 1
+		echo "${red}Error: File has only 1 subtitle. Use Shift time (-s parameter) instead.${normal}"; return 1
 	fi
 
 
@@ -1437,15 +1443,15 @@ adjust_time ()
 
 
 	if (( $pa == $pb )); then
-		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; return 1
+		echo "${red}Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle${normal}"; return 1
 	elif (( $pa > $pb )); then
-		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; return 1
+		echo "${red}Error: Cannot process the file. The first subtitle starts after the last subtitle${normal}"; return 1
 	fi
 
 	if (( $p == $p_ )); then
-		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; return 1
+		echo "${red}Error: The first subtitle cannot start at the same time as the last subtitle${normal}"; return 1
 	elif (( $p > $p_ )); then
-		echo "Error: The first subtitle cannot start after the last subtitle"; return 1
+		echo "${red}Error: The first subtitle cannot start after the last subtitle${normal}"; return 1
 	fi
 
 
@@ -1474,7 +1480,7 @@ adjust_time ()
 			p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
 			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
-				echo "Error: Negative time not allowed. Check the adjusting values."; return 1
+				echo "${red}Error: Negative time not allowed. Check the adjusting values.${normal}"; return 1
 			fi
 
 			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
@@ -1514,7 +1520,7 @@ adjust_time_v2 ()
 
 	# Check if the file has only 1 subtitle
 	if ((subcounter == 1)); then
-		echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; return 1
+		echo "${red}Error: File has only 1 subtitle. Use Shift time (-s parameter) instead.${normal}"; return 1
 	fi
 
 
@@ -1546,7 +1552,7 @@ adjust_time_v2 ()
 	done
 
 	if (( 10#$m1a >= 60 )) || (( 10#$s1a >= 60 )) || (( 10#$m1b >= 60 )) || (( 10#$s1b >= 60 )); then
-		echo "Error: The first or last subtitle time is invalid."; return 1
+		echo "${red}Error: The first or last subtitle time is invalid.${normal}"; return 1
 	fi
 
 	# Time in milliseconds of the start time of the first subtitle
@@ -1571,7 +1577,7 @@ adjust_time_v2 ()
 		s="${BASH_REMATCH[4]}"
 		f="${BASH_REMATCH[5]}"
 	else
-		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff'"; exit 1
+		echo "${red}Error: Syntax must be like '(+/-)hh:mm:ss,fff'${normal}"; exit 1
 	fi
 
 	if ! [[ $adjustonlylast ]]; then
@@ -1586,11 +1592,11 @@ adjust_time_v2 ()
 		s_="${BASH_REMATCH[4]}"
 		f_="${BASH_REMATCH[5]}"
 	else
-		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff'"; exit 1
+		echo "${red}Error: Syntax must be like '(+/-)hh:mm:ss,fff'${normal}"; exit 1
 	fi
 
 	if (( 10#$m >= 60 )) || (( 10#$s >= 60 )) || (( 10#$m_ >= 60 )) || (( 10#$s_ >= 60 )); then
-		echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+		echo "${red}Error: Minutes and seconds must take a value of less than 60${normal}"; exit 1
 	fi
 
 
@@ -1609,15 +1615,15 @@ adjust_time_v2 ()
 
 
 	if (( $pa == $pb )); then
-		echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; return 1
+		echo "${red}Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle${normal}"; return 1
 	elif (( $pa > $pb )); then
-		echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; return 1
+		echo "${red}Error: Cannot process the file. The first subtitle starts after the last subtitle${normal}"; return 1
 	fi
 
 	if (( $p == $p_ )); then
-		echo "Error: The first subtitle cannot start at the same time as the last subtitle"; return 1
+		echo "${red}Error: The first subtitle cannot start at the same time as the last subtitle${normal}"; return 1
 	elif (( $p > $p_ )); then
-		echo "Error: The first subtitle cannot start after the last subtitle"; return 1
+		echo "${red}Error: The first subtitle cannot start after the last subtitle${normal}"; return 1
 	fi
 
 
@@ -1646,7 +1652,7 @@ adjust_time_v2 ()
 			p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
 			if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
-				echo "Error: Negative time not allowed. Check the adjusting values."; return 1
+				echo "${red}Error: Negative time not allowed. Check the adjusting values.${normal}"; return 1
 			fi
 
 			j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
@@ -1668,12 +1674,12 @@ synchronize_with_file ()
 	if [[ $synchronizedirectory ]]; then
 		synchronizefile="$synchronizedirectory/$(basename "$inputfilename")"
 		if ! [[ -f "$synchronizefile" ]]; then
-			echo "Error: \"$synchronizefile\" not found."
+			echo "${red}Error: \"$synchronizefile\" not found.${normal}"
 			return 1
 		fi
 
 		if ! [[ -r "$synchronizefile" ]]; then
-			echo "Error: \"$synchronizefile\" is not readable."
+			echo "${red}Error: \"$synchronizefile\" is not readable.${normal}"
 			return 1
 		fi
 	fi
@@ -1727,7 +1733,7 @@ synchronize_with_file ()
 		done
 
 		if (( 10#$m >= 60 )) || (( 10#$s >= 60 )) || (( 10#$m_ >= 60 )) || (( 10#$s_ >= 60 )); then
-			echo "Error: The first or last subtitle time of the subtitle you want to synchronize with, is invalid."; return 1
+			echo "${red}Error: The first or last subtitle time of the subtitle you want to synchronize with, is invalid.${normal}"; return 1
 		fi
 
 		# Calculate the NEW first and last subtitle
@@ -1735,9 +1741,9 @@ synchronize_with_file ()
 		p_=$(($(($((10#$h_)) * 3600000)) + $(($((10#$m_)) * 60000)) + $(($((10#$s_)) * 1000)) + $((10#$f_))))
 
 		if (( $p == $p_ )); then
-			echo "Error: The first subtitle cannot start at the same time as the last subtitle"; return 1
+			echo "${red}Error: The first subtitle cannot start at the same time as the last subtitle${normal}"; return 1
 		elif (( $p > $p_ )); then
-			echo "Error: The first subtitle cannot start after the last subtitle"; return 1
+			echo "${red}Error: The first subtitle cannot start after the last subtitle${normal}"; return 1
 		fi
 
 
@@ -1762,7 +1768,7 @@ synchronize_with_file ()
 
 		# Check if the file has only 1 subtitle
 		if ((subcounter == 1)); then
-			echo "Error: File has only 1 subtitle. Use Shift time (-s parameter) instead."; return 1
+			echo "${red}Error: File has only 1 subtitle. Use Shift time (-s parameter) instead.${normal}"; return 1
 		fi
 
 
@@ -1800,9 +1806,9 @@ synchronize_with_file ()
 		pb=$(($(($((10#$h1b)) * 3600000)) + $(($((10#$m1b)) * 60000)) + $(($((10#$s1b)) * 1000)) + $((10#$f1b))))
 
 		if (( $pa == $pb )); then
-			echo "Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle"; return 1
+			echo "${red}Error: Cannot process the file. The first subtitle starts at the same time as the last subtitle${normal}"; return 1
 		elif (( $pa > $pb )); then
-			echo "Error: Cannot process the file. The first subtitle starts after the last subtitle"; return 1
+			echo "${red}Error: Cannot process the file. The first subtitle starts after the last subtitle${normal}"; return 1
 		fi
 
 
@@ -1831,7 +1837,7 @@ synchronize_with_file ()
 				p2_new=$(($p + $diff1 * (($p2 - $pa)) / $diff2))
 
 				if (( $p1_new < 0 )) || (( $p2_new < 0 )); then
-					echo "Error: Negative time not allowed. Check the adjusting values."; return 1
+					echo "${red}Error: Negative time not allowed. Check the adjusting values.${normal}"; return 1
 				fi
 
 				j1=$(printf "%02d:%02d:%02d,%03d" $(($p1_new / 3600000)) $(($(($p1_new % 3600000)) / 60000)) $(($(($p1_new % 60000)) / 1000)) $(($p1_new % 1000)))
@@ -1950,7 +1956,7 @@ replace_text ()
 	regexallowedframe="^\{[0-9]+\}$"
 
 	if ! [[  $replace1 =~  $regexallowedtimes ]] && ! [[  $replace1 =~  $regexallowedframes ]] && ! [[  $replace1 =~  $regexallowedtime ]] && ! [[  $replace1 =~  $regexallowedframe ]] && [[ $replace1 =~ $regexforbittensynbols ]]; then
-		echo "Error: You cannot replace this"; exit 1
+		echo "${red}Error: You cannot replace this${normal}"; exit 1
 	fi
 
 	# Check if the srt or sub is OK
@@ -2030,7 +2036,7 @@ sub2_srt ()
 	elif [[ $sub2srt == "ntsc" ]]; then ratio=1; fps=30000
 	elif [[ $sub2srt =~ ^[0-9]+$ ]]; then ratio=1; fps=$(($sub2srt * 1001))
 	elif [[ $sub2srt =~ ^[0-9]+\.[0-9]*$ ]]; then fpsint=${sub2srt%.*}; fpsdecimal=${sub2srt##*.}; decimallength=${#fpsdecimal}; if (( $decimallength == 0 )); then ratio=1; else ratio=1$(eval printf '0%.0s' {1..$decimallength}); fi; fps=$(($(echo $fpsint$fpsdecimal) * 1001))
-	else echo -e "Error: The sub2srt parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970"; exit 1
+	else echo -e "${red}Error: The sub2srt parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970${normal}"; exit 1
 	fi
 
 
@@ -2273,7 +2279,7 @@ sub2_srt ()
 	if (( ${#arraysrt[@]} > 2 )); then
 		printf "%s\r\n" "${arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
-		echo "Error: Not a valid sub file"; return 1
+		echo "${red}Error: Not a valid sub file${normal}"; return 1
 	fi
 }
 
@@ -2285,7 +2291,7 @@ srt2_sub ()
 	elif [[ $srt2sub == "ntsc" ]]; then ratio=1; fps=30000; firstline="{1}{1}29.970"
 	elif [[ $srt2sub =~ ^[0-9]+$ ]]; then ratio=1; fps=$(($srt2sub * 1001)); firstline="{1}{1}$srt2sub.000"
 	elif [[ $srt2sub =~ ^[0-9]+\.[0-9]*$ ]]; then fpsint=${srt2sub%.*}; fpsdecimal=${srt2sub##*.}; decimallength=${#fpsdecimal}; if (( $decimallength == 0 )); then ratio=1; trizero="000"; firstline="{1}{1}$srt2sub$trizero"; else ratio=1$(eval printf '0%.0s' {1..$decimallength}); firstline="{1}{1}$srt2sub"; fi; fps=$(($(echo $fpsint$fpsdecimal) * 1001))
-	else echo -e "Error: The srt2sub parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970"; exit 1
+	else echo -e "${red}Error: The srt2sub parameter only accepts the arguments pal, film, ntsc or a custom framerate.\n       Pal = 25, film = 23.976 and ntsc = 29.970${normal}"; exit 1
 	fi
 
 
@@ -2911,7 +2917,7 @@ srt2_sub ()
 	if (( ${#arraysub[@]} >= 1 )); then
 		printf "%s\r\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$newfilename"
 	else
-		echo "Error: Not a valid srt file"; return 1
+		echo "${red}Error: Not a valid srt file${normal}"; return 1
 	fi
 	IFS=$old_IFS		# restore default field separator
 }
@@ -3029,11 +3035,11 @@ join_srt ()
 			s="${BASH_REMATCH[3]}"
 			f="${BASH_REMATCH[4]}"
 		else
-			echo "Error: Syntax must be like 'hh:mm:ss,fff'"; exit 1
+			echo "${red}Error: Syntax must be like 'hh:mm:ss,fff'${normal}"; exit 1
 		fi
 
 		if (( 10#$m >= 60 )) || (( 10#$s >= 60 )); then
-			echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+			echo "${red}Error: Minutes and seconds must take a value of less than 60${normal}"; exit 1
 		fi
 
 		# Time in milliseconds of jointime
@@ -3042,7 +3048,7 @@ join_srt ()
 
 		# Compare jointime with the end time of the last subtitle of the first file
 		if ((p < p2b)); then
-			echo "Error: The duration of the first video (-J parameter) cannot be less than the first subtitle"; exit 1
+			echo "${red}Error: The duration of the first video (-J parameter) cannot be less than the first subtitle${normal}"; exit 1
 		else
 			echo "Joining \"$inputfilename\" with \"$joinsrt\"..."
 		fi
@@ -3173,7 +3179,7 @@ split_srt ()
 		f="${BASH_REMATCH[5]}"
 
 		if (( 10#$m >= 60 )) || (( 10#$s >= 60 )); then
-			echo "Error: Minutes and seconds must take a value of less than 60"; exit 1
+			echo "${red}Error: Minutes and seconds must take a value of less than 60${normal}"; exit 1
 		fi
 
 		# Time in milliseconds to split the subtitle
@@ -3183,11 +3189,11 @@ split_srt ()
 		fi
 
 		if ((p < p1a)); then
-			echo "Error: Split time cannot precede the start time of the first subtitle."; return 1
+			echo "${red}Error: Split time cannot precede the start time of the first subtitle.${normal}"; return 1
 		fi
 
 		if ((p > p1b)); then
-			echo "Error: Split time cannot exceed the start time of the last subtitle."; return 1
+			echo "${red}Error: Split time cannot exceed the start time of the last subtitle.${normal}"; return 1
 		fi
 
 		# Find the subtitle to make the split
@@ -3225,7 +3231,7 @@ split_srt ()
 
 		# Check if the given integer is OK
 		if ((splitinteger == 0)) || ((splitinteger > ((subcounter-1)))); then
-			echo "Error: The number of subtitles in the file are $subcounter. The given integer must be between or equal to 1 and $((subcounter-1))."; return 1
+			echo "${red}Error: The number of subtitles in the file are $subcounter. The given integer must be between or equal to 1 and $((subcounter-1)).${normal}"; return 1
 		fi
 
 		# Create the two new subtitle arrays
@@ -3252,7 +3258,7 @@ split_srt ()
 		denominator="${BASH_REMATCH[3]}"
 
 		if ((numerator == 0)) || ((denominator == 0)) || ((numerator >= denominator)); then
-			echo "Error: The numerator must be less than the denominator and both must not be 0."; exit 1
+			echo "${red}Error: The numerator must be less than the denominator and both must not be 0.${normal}"; exit 1
 		fi
 
 		# Time in milliseconds to split the subtitle
@@ -3263,7 +3269,7 @@ split_srt ()
 		fi
 
 		if ((p < p1a)); then
-			echo "Error: Split time cannot precede the start time of the first subtitle."; return 1
+			echo "${red}Error: Split time cannot precede the start time of the first subtitle.${normal}"; return 1
 		fi
 
 		# Find the subtitle to make the split
@@ -3297,7 +3303,7 @@ split_srt ()
 		denominator="${BASH_REMATCH[3]}"
 
 		if ((numerator == 0)) || ((denominator == 0)) || ((numerator >= denominator)); then
-			echo "Error: The numerator must be less than the denominator and both must not be 0."; exit 1
+			echo "${red}Error: The numerator must be less than the denominator and both must not be 0.${normal}"; exit 1
 		fi
 
 		if [[ $sign == "-" ]]; then
@@ -3316,7 +3322,7 @@ split_srt ()
 
 		# Check if the integer is OK
 		if ((splitinteger == 0)); then
-			echo "Error: The fraction is too small. Exiting..."; exit 1
+			echo "${red}Error: The fraction is too small. Exiting...${normal}"; exit 1
 		fi
 
 		# Create the two new subtitle arrays
@@ -3338,7 +3344,7 @@ split_srt ()
 			fi
 		done
 	else
-		echo "Error: Syntax must be like '(+/-)hh:mm:ss,fff' or '(+/-)SUB_INTEGER' or '(+/-)INTEGER:INTEGERt' or '(+/-)INTEGER:INTEGERn'"; exit 1
+		echo "${red}Error: Syntax must be like '(+/-)hh:mm:ss,fff' or '(+/-)SUB_INTEGER' or '(+/-)INTEGER:INTEGERt' or '(+/-)INTEGER:INTEGERn'${normal}"; exit 1
 	fi
 
 
@@ -4142,7 +4148,7 @@ delete_HI ()
 	if [[ $deletetextsforHI =~ $regexHIsymbols ]]; then
 		HIsymbols="${BASH_REMATCH[1]}"
 	else
-		echo -e "Error: Syntax must be like '([{?mM'. The single quotes are necessary.\nThe ([{? characters are the symbols that the text for the hearing impaired is enclosed by.\n'm' and 'M' are for music symbols. With 'm' only the music symbols are deleted.\nWith 'M' the text that is enclosed by the music symbols is deleted too.\nUse only the symbol(s) that are needed for each subtitle file."
+		echo -e "${red}Error: Syntax must be like '([{?mM'. The single quotes are necessary.\nThe ([{? characters are the symbols that the text for the hearing impaired is enclosed by.\n'm' and 'M' are for music symbols. With 'm' only the music symbols are deleted.\nWith 'M' the text that is enclosed by the music symbols is deleted too.\nUse only the symbol(s) that are needed for each subtitle file.${normal}"
 		exit 1
 	fi
 
@@ -5508,11 +5514,11 @@ fix_common_errors ()
 
 # Check for incompatible parameters
 if [[ $inputfilename ]] && [[ $inputdirectory ]]; then
-	echo "Error: The parameters -i (Input file) and -d (Input directory) cannot be used together."; exit 1
+	echo "${red}Error: The parameters -i (Input file) and -d (Input directory) cannot be used together.${normal}"; exit 1
 fi
 
 if [[ $inputfilename ]] && [[ $synchronizedirectory ]]; then
-	echo "Error: The parameters -i (Input file) and -D (Synchronize with directory.) cannot be used together."
+	echo "${red}Error: The parameters -i (Input file) and -D (Synchronize with directory.) cannot be used together.${normal}"
 	echo "Instead of \"Synchronize with directory\" you can use \"Synchronize with file\" (-y parameter)."; exit 1
 fi
 
@@ -5595,7 +5601,7 @@ if [[ $inputfilename ]]; then
 	shopt -u nocaseglob
 
 	if ((${#filesarray[@]} == 0)); then
-		echo "Error: No file found."; exit 1
+		echo "${red}Error: No file found.${normal}"; exit 1
 	elif ((${#filesarray[@]} == 1)); then
 		master_function
 
@@ -5647,7 +5653,7 @@ if [[ $inputdirectory ]]; then
 
 	# Check if directory/ies exist
 	if ! [[ $(ls -p -d $inputdirectory 2> /dev/null | grep /) ]]; then
-		echo "Error: No directory found."; exit 1
+		echo "${red}Error: No directory found.${normal}"; exit 1
 	fi
 
 	# Capture the output of ls to an array
@@ -5666,7 +5672,7 @@ if [[ $inputdirectory ]]; then
 		fi
 		echo "${#filesarray[@]} sub file(s) found"
 	elif [[ $synchronizefile ]] || [[ $joinsrt ]]; then
-		echo "Error: Synchronize with file and Join srt cannot be used in batch mode."
+		echo "${red}Error: Synchronize with file and Join srt cannot be used in batch mode.${normal}"
 		echo "Instead of Synchronize with file you can use Synchronize with directory (-D parameter)."; exit 1
 	else
 		if [[ $recurse ]]; then
