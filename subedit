@@ -196,6 +196,16 @@ ${cyan}PARAMETERS${normal}
       The single quotes are necessary.
       Works with srt and sub.
 
+  ${bold}-m [Switch]${normal}
+      Fix common errors.
+      Fix common OCR mistakes like zero and capital 'o' ripping mistakes, replace \"I\" with \"l\" in the middle of
+      a lowercase word, replace a single \"l\" with \"I\", replace \"l'm\" with \"I'm\" etc. It's similar to 'Clean
+      trash' but it fixes different errors.
+      Also fixes: Invalid times (duration < 0), too long durations (max of 7 seconds or 0.15 seconds per character),
+      overlapping display times, too short durations (0.06 seconds per character), subtitles over two lines and
+      too long lines.
+      Works with srt and sub.
+
   ${bold}-h [Switch]${normal}
       Display help.
 
@@ -212,8 +222,8 @@ text2="${cyan}NOTES${normal}
   • -i (input file) or -d (input directory) is required in every case.
   • If only -i parameter is used then the subtitle goes through a basic clean-up (empty subtitles are removed etc.)
   • -1 and -2 parameters (adjust time) can be combined (equivalent of using just the -a parameter).
-  • -f, -F (find), -e, -E (replace), -c (clean trash) and -k (delete text for HI) parameters work with
-  both srt and sub subtitle files.
+  • -f, -F (find), -e, -E (replace), -c (clean trash), -k (delete text for HI) and -m (fix common errors) parameters
+  work with both srt and sub subtitle files.
   • You can put different parameters in the same command and they'll run one after the other.
   • Bellow you'll find examples for every parameter.\n\n\n"
 
@@ -549,6 +559,18 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   Deletes text that's enclosed in braces and the music symbols ¶♪♫.\n\n\n"
 
 
+text2+="  ${bold}Fix common errors${normal}
+
+  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -m
+  Fixes common OCR mistakes, errors in display times etc.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -m -b
+  Fixes common errors in all subtitle files in directory \"foo_directory\", and creates
+  a backup for each one before processing them.\n\n\n"
+
+
 text2+="${cyan}ABOUT${normal}
   Authors:      ${authors[0]}
                 ${authors[1]}
@@ -564,12 +586,12 @@ exit 0
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:hH" opt); then
+if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:mhH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:hH" parameter; do
+while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:mhH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		d) inputdirectory=$OPTARG ;;
@@ -603,6 +625,7 @@ while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:hH" parameter; do
 		X) splittime="True" ;;
 		c) cleantrash="True" ;;
 		k) deletetextsforHI=$OPTARG ;;
+		m) fixerrors="True" ;;
 		h) get_help ;;
 		H) longhelp="True"; get_help ;;
 		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
@@ -4291,6 +4314,1197 @@ delete_HI ()
 	IFS=$old_IFS		# restore default field separator
 }
 
+fix_common_errors ()
+{
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
+	# Check if the srt or sub is OK
+	check_srt_and_sub "$inputfilename" "Fix common errors of \"$inputfilename\""
+
+	# Exit this function if the return code of check_srt_and_sub is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
+	# Fix zero and capital 'o' ripping mistakes,
+	# fixes for "I" at the beginning of the word before lowercase vowels,
+	# replace "II" with "ll" at the end of a lowercase word,
+	# replace "II" with "ll" at the beginning of a lowercase word,
+	# replace "I" with "l" in the middle of a lowercase word,
+	# replace "I" with "l" at the end of a lowercase word,
+	# replace "l" with "I" in the middle of an uppercase word,
+	# replace "l" with "I" at the end of an uppercase word,
+	# replace a single "l" with "I",
+	# replace "l'm" with "I'm",
+	# replace "i'm" with "I'm",
+	# replace "I'II"/"you'II" etc. with "I'll"/"you'll" etc. (with an optional space before or after the apostrophe),
+	# "I" after an uppercase letter at the beginning and before a lowercase letter is most likely an "l".
+	tempvar="$(cat "$inputfilename" | iconv -f $encoding -t utf-8 | sed -b -e s"/\([0-9]\)\([.,]\{0,1\}\)[OΟ]/\1\20/g"\
+	-e s"/[OΟ]\([.,]\{0,1\}\)\([0-9]\)/0\1\2/g"\
+	-e s"/\([A-Za-z]\)0/\1O/g"\
+	-e s"/\([Α-ΩΆ-ΏΪΫα-ωά-ώΐΰ]\)0/\1Ο/g"\
+	-e s"/\b0\([A-Za-z]\)/O\1/g"\
+	-e s"/\b0\([Α-ΩΆ-ΏΪΫα-ωά-ώΐΰ]\)/Ο\1/g"\
+	-e s"/^\(\(<[^>]*>\)\{0,\}\)III/\1Ill/g"\
+	-e s"/^\({[0-9]\{1,\}}{[0-9]\{1,\}}\({[cCsSfFPyY]:[^}]*}\)*[-]\{0,\}\)III/\1Ill/g"\
+	-e s"/\(|\({[cCsSfFPyY]:[^}]*}\)*[-]\{0,\}\)III/\1Ill/g"\
+	-e s"/\([.?\!-][ ]\{0,1\}\)III/\1Ill/g"\
+	-e s"/\([a-z]\)II/\1ll/g"\
+	-e s"/II\([a-z]\)/ll\1/g"\
+	-e s"/\([a-z]\)I\([a-z]\)/\1l\2/g"\
+	-e s"/\([a-z]\)I\b/\1l/g"\
+	-e s"/\([A-Z]\)l\([A-Z]\)/\1I\2/g"\
+	-e s"/\([A-Z]\{2,\}\)l\b/\1I/g"\
+	-e s"/\bl\b/I/g"\
+	-e s"/\bl'm\b/I'm/g"\
+	-e s"/\bi'm\b/I'm/g"\
+	-e s"/\([A-Za-z][ ]\{0,1\}'[ ]\{0,1\}\)II\b/\1ll/g"\
+	-e s"/\b\([A-Z]\)I\([a-z]\)/\1l\2/g")"
+
+	# Export tempvar to the input subtitle
+	printf "%s\n" "$tempvar" | iconv -f utf-8 -t $encoding > "$inputfilename"
+
+	# We do not need this anymore
+	unset tempvar
+
+	if [[ $subtitleis == "srt" ]]; then
+		# Read text file to arraysrt
+		read_srt "$inputfilename"
+
+		IFS=$'\n'
+
+		# We need the arraysrt to be in utf-8
+		arraysrt=( $(printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8) )
+
+		IFS=$'\r'
+
+		regexremove="(.*)<[/]?([ibus]|font[^>]*)>(.*)"
+		buffer=()
+		buffer_prev1=()
+		buffer_prev2=()
+
+		# These go into functions because they need to run more than one time
+		update_prev2_values ()
+		{
+			if [[ ${buffer_prev2[1]}$cr =~ $regextime ]]; then
+				h__1="${BASH_REMATCH[1]}"
+				m__1="${BASH_REMATCH[2]}"
+				s__1="${BASH_REMATCH[3]}"
+				f__1="${BASH_REMATCH[4]}"
+
+				h__2="${BASH_REMATCH[5]}"
+				m__2="${BASH_REMATCH[6]}"
+				s__2="${BASH_REMATCH[7]}"
+				f__2="${BASH_REMATCH[8]}"
+
+				start_prev2=$(($(($((10#$h__1)) * 3600000)) + $(($((10#$m__1)) * 60000)) + $(($((10#$s__1)) * 1000)) + $((10#$f__1))))
+				stop_prev2=$(($(($((10#$h__2)) * 3600000)) + $(($((10#$m__2)) * 60000)) + $(($((10#$s__2)) * 1000)) + $((10#$f__2))))
+
+				((duration_prev2 = stop_prev2 - start_prev2))
+				((ms_per_char_prev2 = duration_prev2 / characters_prev2))
+			fi
+		}
+
+		update_prev1_values ()
+		{
+			# Update the values
+			if [[ ${buffer_prev1[1]}$cr =~ $regextime ]]; then
+				h_1="${BASH_REMATCH[1]}"
+				m_1="${BASH_REMATCH[2]}"
+				s_1="${BASH_REMATCH[3]}"
+				f_1="${BASH_REMATCH[4]}"
+
+				h_2="${BASH_REMATCH[5]}"
+				m_2="${BASH_REMATCH[6]}"
+				s_2="${BASH_REMATCH[7]}"
+				f_2="${BASH_REMATCH[8]}"
+
+				start_prev1=$(($(($((10#$h_1)) * 3600000)) + $(($((10#$m_1)) * 60000)) + $(($((10#$s_1)) * 1000)) + $((10#$f_1))))
+				stop_prev1=$(($(($((10#$h_2)) * 3600000)) + $(($((10#$m_2)) * 60000)) + $(($((10#$s_2)) * 1000)) + $((10#$f_2))))
+
+				((duration_prev1 = stop_prev1 - start_prev1))
+				((ms_per_char_prev1 = duration_prev1 / characters_prev1))
+			fi
+		}
+
+		update_current_sub_values ()
+		{
+			if [[ ${buffer[1]}$cr =~ $regextime ]]; then
+				h1="${BASH_REMATCH[1]}"
+				m1="${BASH_REMATCH[2]}"
+				s1="${BASH_REMATCH[3]}"
+				f1="${BASH_REMATCH[4]}"
+
+				h2="${BASH_REMATCH[5]}"
+				m2="${BASH_REMATCH[6]}"
+				s2="${BASH_REMATCH[7]}"
+				f2="${BASH_REMATCH[8]}"
+
+				start=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+				stop=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$f2))))
+
+				((duration = stop - start))
+				((ms_per_char = duration / characters))
+			fi
+		}
+
+		# This was put inside a function because it needs to run twice
+		fix_srt_subtitles ()
+		{
+			if [[ $buffer ]]; then
+				# buffer_prev2 contains the third to current subtitle
+				# buffer_prev1 contains the second to current subtitle
+				# buffer contains the current subtitle
+
+				if [[ $buffer_prev2 ]]; then
+					# Duration of buffer_prev2
+					if [[ ${buffer_prev2[1]}$cr =~ $regextime ]]; then
+						h__1="${BASH_REMATCH[1]}"
+						m__1="${BASH_REMATCH[2]}"
+						s__1="${BASH_REMATCH[3]}"
+						f__1="${BASH_REMATCH[4]}"
+
+						h__2="${BASH_REMATCH[5]}"
+						m__2="${BASH_REMATCH[6]}"
+						s__2="${BASH_REMATCH[7]}"
+						f__2="${BASH_REMATCH[8]}"
+
+						start_prev2=$(($(($((10#$h__1)) * 3600000)) + $(($((10#$m__1)) * 60000)) + $(($((10#$s__1)) * 1000)) + $((10#$f__1))))
+						stop_prev2=$(($(($((10#$h__2)) * 3600000)) + $(($((10#$m__2)) * 60000)) + $(($((10#$s__2)) * 1000)) + $((10#$f__2))))
+
+						((duration_prev2 = stop_prev2 - start_prev2))
+					fi
+
+					# Number of characters of buffer_prev2
+					characters_prev2=0
+					for ((j=2; j<=${#buffer_prev2[@]}; j++)); do
+						line=${buffer_prev2[$j]}
+						while [[ $line =~ $regexremove ]]; do
+							line=${BASH_REMATCH[1]}${BASH_REMATCH[3]}
+						done
+						((characters_prev2 += ${#line}))
+					done
+
+					# Milliseconds per character of buffer_prev2
+					((ms_per_char_prev2 = duration_prev2 / characters_prev2))
+				fi
+
+				if [[ $buffer_prev1 ]]; then
+					# Duration of buffer_prev1
+					if [[ ${buffer_prev1[1]}$cr =~ $regextime ]]; then
+						h_1="${BASH_REMATCH[1]}"
+						m_1="${BASH_REMATCH[2]}"
+						s_1="${BASH_REMATCH[3]}"
+						f_1="${BASH_REMATCH[4]}"
+
+						h_2="${BASH_REMATCH[5]}"
+						m_2="${BASH_REMATCH[6]}"
+						s_2="${BASH_REMATCH[7]}"
+						f_2="${BASH_REMATCH[8]}"
+
+						start_prev1=$(($(($((10#$h_1)) * 3600000)) + $(($((10#$m_1)) * 60000)) + $(($((10#$s_1)) * 1000)) + $((10#$f_1))))
+						stop_prev1=$(($(($((10#$h_2)) * 3600000)) + $(($((10#$m_2)) * 60000)) + $(($((10#$s_2)) * 1000)) + $((10#$f_2))))
+
+						((duration_prev1 = stop_prev1 - start_prev1))
+					fi
+
+					# Number of characters of buffer_prev1
+					characters_prev1=0
+					for ((j=2; j<=${#buffer_prev1[@]}; j++)); do
+						line=${buffer_prev1[$j]}
+						while [[ $line =~ $regexremove ]]; do
+							line=${BASH_REMATCH[1]}${BASH_REMATCH[3]}
+						done
+						((characters_prev1 += ${#line}))
+					done
+
+					# Milliseconds per character of buffer_prev1
+					((ms_per_char_prev1 = duration_prev1 / characters_prev1))
+				fi
+
+				# Duration of buffer
+				if [[ ${buffer[1]}$cr =~ $regextime ]]; then
+					h1="${BASH_REMATCH[1]}"
+					m1="${BASH_REMATCH[2]}"
+					s1="${BASH_REMATCH[3]}"
+					f1="${BASH_REMATCH[4]}"
+
+					h2="${BASH_REMATCH[5]}"
+					m2="${BASH_REMATCH[6]}"
+					s2="${BASH_REMATCH[7]}"
+					f2="${BASH_REMATCH[8]}"
+
+					start=$(($(($((10#$h1)) * 3600000)) + $(($((10#$m1)) * 60000)) + $(($((10#$s1)) * 1000)) + $((10#$f1))))
+					stop=$(($(($((10#$h2)) * 3600000)) + $(($((10#$m2)) * 60000)) + $(($((10#$s2)) * 1000)) + $((10#$f2))))
+
+					((duration = stop - start))
+				fi
+
+				# Number of characters of buffer
+				characters=0
+				for ((j=2; j<=${#buffer[@]}; j++)); do
+					line=${buffer[$j]}
+					while [[ $line =~ $regexremove ]]; do
+						line=${BASH_REMATCH[1]}${BASH_REMATCH[3]}
+					done
+					((characters += ${#line}))
+				done
+
+				# Milliseconds per character of buffer
+				((ms_per_char = duration / characters))
+
+
+				# Fix invalid times (duration < 0) for buffer_prev1
+				if [[ $buffer_prev1 ]] && ((duration_prev1 < 0)); then
+					if ((start_prev1 > start)) && ((stop_prev1 > stop_prev2)) && ((stop_prev1 < start + duration/2)); then			# invalid start, OK stop
+						((new_duration_prev1 = 60 * characters_prev1))
+						if ((new_duration_prev1 < 1000)); then
+							new_duration_prev1=1000
+						fi
+						((new_start_prev1 = stop_prev1 - new_duration_prev1))
+						if ((new_start_prev1 <= stop_prev2)); then
+							((new_start_prev1 = stop_prev2 + 40))
+						fi
+
+						j_1=$(printf "%02d:%02d:%02d,%03d" $(($new_start_prev1 / 3600000)) $(($(($new_start_prev1 % 3600000)) / 60000)) $(($(($new_start_prev1 % 60000)) / 1000)) $(($new_start_prev1 % 1000)))
+						j_2="$h_2:$m_2:$s_2,$f_2"
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					elif ((start_prev1 > stop_prev2 - duration_prev2/2)) && ((start_prev1 < start)) && ((stop_prev1 < stop_prev2)); then	# OK start, invalid stop
+						((new_duration_prev1 = 60 * characters_prev1))
+						if ((new_duration_prev1 < 1000)); then
+							new_duration_prev1=1000
+						fi
+						((new_stop_prev1 = start_prev1 + new_duration_prev1))
+						if ((new_stop_prev1 >= start)); then
+							((new_stop_prev1 = start - 40))
+						fi
+
+						j_1="$h_1:$m_1:$s_1,$f_1"
+						j_2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop_prev1 / 3600000)) $(($(($new_stop_prev1 % 3600000)) / 60000)) $(($(($new_stop_prev1 % 60000)) / 1000)) $(($new_stop_prev1 % 1000)))
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					elif ((start_prev1 > stop_prev2)) && ((start_prev1 < start)) && ((stop_prev1 > stop_prev2)) && ((stop_prev1 < start)); then		# OK start, OK stop
+						j_1="$h_2:$m_2:$s_2,$f_2"
+						j_2="$h_1:$m_1:$s_1,$f_1"
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					else		# invalid start, invalid stop
+						((new_start_prev1 = stop_prev2 + 40))
+						((new_duration_prev1 = 60 * characters_prev1))
+						if ((new_duration_prev1 < 1000)); then
+							new_duration_prev1=1000
+						fi
+						((new_stop_prev1 = new_start_prev1 + new_duration_prev1))
+						if ((new_stop_prev1 >= start)); then
+							((new_stop_prev1 = start - 40))
+						fi
+
+						j_1=$(printf "%02d:%02d:%02d,%03d" $(($new_start_prev1 / 3600000)) $(($(($new_start_prev1 % 3600000)) / 60000)) $(($(($new_start_prev1 % 60000)) / 1000)) $(($new_start_prev1 % 1000)))
+						j_2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop_prev1 / 3600000)) $(($(($new_stop_prev1 % 3600000)) / 60000)) $(($(($new_stop_prev1 % 60000)) / 1000)) $(($new_stop_prev1 % 1000)))
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					fi
+				fi
+
+
+				# Fix subtitle out of place for buffer_prev1
+				if [[ $buffer_prev1 ]] && ((start_prev1 > start)) && ((stop_prev1 > start)) && ((duration_prev1 > 0)) && ((stop_prev2 < start)); then
+					((new_start_prev1 = stop_prev2 + 40))
+					((new_duration_prev1 = 60 * characters_prev1))
+					if ((new_duration_prev1 < 1000)); then
+						new_duration_prev1=1000
+					fi
+					((new_stop_prev1 = new_start_prev1 + new_duration_prev1))
+					if ((new_stop_prev1 >= start)); then
+						((new_stop_prev1 = start - 40))
+					fi
+
+					if ((new_stop_prev1 - new_start_prev1 <= 500)); then
+						((new_start_prev1 = stop_prev2 + 1))
+						((new_stop_prev1 = start - 1))
+					fi
+
+					if ((new_stop_prev1 - new_start_prev1 > 124)); then
+						j_1=$(printf "%02d:%02d:%02d,%03d" $(($new_start_prev1 / 3600000)) $(($(($new_start_prev1 % 3600000)) / 60000)) $(($(($new_start_prev1 % 60000)) / 1000)) $(($new_start_prev1 % 1000)))
+						j_2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop_prev1 / 3600000)) $(($(($new_stop_prev1 % 3600000)) / 60000)) $(($(($new_stop_prev1 % 60000)) / 1000)) $(($new_stop_prev1 % 1000)))
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					fi
+				elif [[ $buffer_prev2 ]] && ((start_prev1 < start_prev2)) && ((stop_prev1 < start_prev2)) && ((duration_prev1 > 0)); then
+					((new_start_prev1 = stop_prev2 + 40))
+					((new_duration_prev1 = 60 * characters_prev1))
+					if ((new_duration_prev1 < 1000)); then
+						new_duration_prev1=1000
+					fi
+					((new_stop_prev1 = new_start_prev1 + new_duration_prev1))
+					if ((new_stop_prev1 >= start)); then
+						((new_stop_prev1 = start - 40))
+					fi
+
+					if ((new_stop_prev1 - new_start_prev1 <= 500)); then
+						((new_start_prev1 = stop_prev2 + 1))
+						((new_stop_prev1 = start - 1))
+					fi
+
+					if ((new_stop_prev1 - new_start_prev1 > 124)); then
+						j_1=$(printf "%02d:%02d:%02d,%03d" $(($new_start_prev1 / 3600000)) $(($(($new_start_prev1 % 3600000)) / 60000)) $(($(($new_start_prev1 % 60000)) / 1000)) $(($new_start_prev1 % 1000)))
+						j_2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop_prev1 / 3600000)) $(($(($new_stop_prev1 % 3600000)) / 60000)) $(($(($new_stop_prev1 % 60000)) / 1000)) $(($new_stop_prev1 % 1000)))
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					fi
+				fi
+
+
+				# Fix too long duration for buffer_prev1. Max of 7 seconds or 0.15 seconds per character
+				# If there is overlapping with the buffer_prev2 but not with buffer, fix start time
+				# else, fix stop time
+				if [[ $buffer_prev2 ]] && ((stop_prev2 >= start_prev1)) && ((stop_prev1 <= start)) && ((duration_prev1 > 7000)); then
+					((new_duration_prev1 = 150 * characters_prev1))
+					if ((new_duration_prev1 < 7000)); then
+						new_duration_prev1=7000
+					fi
+
+					if ((new_duration_prev1 < duration_prev1)); then
+						((new_start_prev1 = stop_prev1 - new_duration_prev1))
+
+						j_1=$(printf "%02d:%02d:%02d,%03d" $(($new_start_prev1 / 3600000)) $(($(($new_start_prev1 % 3600000)) / 60000)) $(($(($new_start_prev1 % 60000)) / 1000)) $(($new_start_prev1 % 1000)))
+						j_2="$h_2:$m_2:$s_2,$f_2"
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					fi
+				elif [[ $buffer_prev1 ]] && ((duration_prev1 > 7000)); then
+					((new_duration_prev1 = 150 * characters_prev1))
+					if ((new_duration_prev1 < 7000)); then
+						new_duration_prev1=7000
+					fi
+
+					if ((new_duration_prev1 < duration_prev1)); then
+						((new_stop_prev1 = start_prev1 + new_duration_prev1))
+
+						j_1="$h_1:$m_1:$s_1,$f_1"
+						j_2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop_prev1 / 3600000)) $(($(($new_stop_prev1 % 3600000)) / 60000)) $(($(($new_stop_prev1 % 60000)) / 1000)) $(($new_stop_prev1 % 1000)))
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					fi
+				fi
+
+
+				# Fix overlapping between buffer_prev2 and buffer_prev1. Leave 40 millisecond time between subtitles.
+				if [[ $buffer_prev2 ]] && ((stop_prev2 >= start_prev1)); then
+					((overlapping = stop_prev2 - start_prev1))
+					((new_stop_prev2 = stop_prev2 - 20 - ms_per_char_prev2 * overlapping / ((ms_per_char_prev2 + ms_per_char_prev1)) ))
+					((new_start_prev1 = new_stop_prev2 + 40))
+
+					if ((stop_prev1 > new_start_prev1)); then
+						j__1="$h__1:$m__1:$s__1,$f__1"
+						j__2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop_prev2 / 3600000)) $(($(($new_stop_prev2 % 3600000)) / 60000)) $(($(($new_stop_prev2 % 60000)) / 1000)) $(($new_stop_prev2 % 1000)))
+						line_new="$j__1 --> $j__2"
+						buffer_prev2[1]=$line_new
+
+						j_1=$(printf "%02d:%02d:%02d,%03d" $(($new_start_prev1 / 3600000)) $(($(($new_start_prev1 % 3600000)) / 60000)) $(($(($new_start_prev1 % 60000)) / 1000)) $(($new_start_prev1 % 1000)))
+						j_2="$h_2:$m_2:$s_2,$f_2"
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev2_values
+						update_prev1_values
+					fi
+				fi
+
+
+				# Fix too short duration for buffer_prev1. 0.06 seconds per character.
+				if [[ $buffer_prev1 ]] && ((ms_per_char_prev1 < 60)); then
+					((new_duration_prev1 = 60 * characters_prev1))
+					if ((new_duration_prev1 < 500)); then
+						new_duration_prev1=500
+					fi
+					((new_stop_prev1 = stop_prev1 + new_duration_prev1 - duration_prev1))
+
+					if ((new_stop_prev1 >= start)); then
+						((new_stop_prev1 = start - 40))
+					fi
+
+					if ((new_stop_prev1 > stop_prev1)); then
+						j_1="$h_1:$m_1:$s_1,$f_1"
+						j_2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop_prev1 / 3600000)) $(($(($new_stop_prev1 % 3600000)) / 60000)) $(($(($new_stop_prev1 % 60000)) / 1000)) $(($new_stop_prev1 % 1000)))
+						line_new="$j_1 --> $j_2"
+						buffer_prev1[1]=$line_new
+
+						# Update the values
+						update_prev1_values
+					fi
+				fi
+
+
+				# Merge subtitles with more than 2 lines into 1 line, except dialogs and empty lines (work in the current subtitle)
+				if ((${#buffer[@]} >= 6)) || ! [[ ${buffer[-1]} =~ $regexemptyline ]]; then
+					tempbuffer=()
+					tempbuffer+=("${buffer[0]}")
+					tempbuffer+=("${buffer[1]}")
+					tempbuffer+=("${buffer[2]}")
+
+					for ((j=3; j<${#buffer[@]}; j++)); do
+						if [[ ${buffer[$j]} =~ ^- ]] || [[ ${buffer[$j]} =~ $regexemptyline ]] || [[ ${tempbuffer[-1]} =~ $regexemptyline ]]; then
+							tempbuffer+=("${buffer[$j]}")
+						else
+							tempbuffer[-1]="${tempbuffer[-1]} ${buffer[$j]}"
+							((characters += 1))
+						fi
+					done
+
+					unset buffer
+					buffer=("${tempbuffer[@]}")
+					unset tempbuffer
+				fi
+
+				# Split too long lines with over 48 characters (work in the current subtitle)
+				if ((${#buffer[@]} <= 4)) && [[ ${buffer[2]} == *" "* ]] && ((characters > 48)); then
+					characters_with_tags=${#buffer[2]}
+					((tag_characters = characters_with_tags - characters))
+
+					((linecenter = characters_with_tags / 2))
+
+					bigline=${buffer[2]}
+
+					# Number of characters of tags in the first half of the line
+					halfline1=${bigline:0:linecenter}
+
+					tag_characters_part1=0
+					line=$halfline1
+					while [[ $line =~ $regexremove ]]; do
+						line=${BASH_REMATCH[1]}${BASH_REMATCH[3]}
+					done
+					((tag_characters_part1 = ${#halfline1} - ${#line}))
+
+					# Number of characters of tags in the second half of the line
+					((tag_characters_part2 = tag_characters - tag_characters_part1))
+					((linecenter = 1 + linecenter + ((tag_characters_part1 - tag_characters_part2))/2))
+
+
+					if [[ ${bigline:linecenter:1} == " " ]]; then
+						splitspace=$linecenter
+					else
+						# Find the first space before center
+						spacebefore=0
+						for ((k=${#halfline1}-1; k>=0; k--)); do
+							((spacebefore++))
+							if [[ ${halfline1:k:1} == " " ]]; then
+								break
+							fi
+						done
+
+						# Find the first space after center
+						halfline2=${bigline:$((linecenter - 1))}
+						centertospace="${halfline2%% *}"
+						((spaceafter = ${#centertospace}))
+
+						if ((spaceafter <= spacebefore)); then
+							((splitspace = linecenter + spaceafter - 1))
+						else
+							((splitspace = linecenter - spacebefore - 1))
+						fi
+					fi
+
+					# Split the long line
+					if [[ ${buffer[-1]} =~ $regexemptyline ]]; then
+						unset buffer[-1]
+					fi
+
+					buffer[2]=${bigline:0:splitspace}
+					buffer+=("${bigline:splitspace+1}")
+					buffer+=("$nl")
+				fi
+
+
+				# Add buffer_prev2 to temp1arraysrt
+				temp1arraysrt+=("${buffer_prev2[@]}")
+			fi
+		}
+
+		for ((i=0; i<=${#arraysrt[@]}; i++)); do
+			if [[ ${arraysrt[$i]} =~ $regexinteger ]] && [[ ${arraysrt[((i+1))]} =~ $regextime ]]; then
+				fix_srt_subtitles
+
+				buffer_prev2=()
+				buffer_prev2+=("${buffer_prev1[@]}")
+				buffer_prev1=()
+				buffer_prev1+=("${buffer[@]}")
+				buffer=()
+			fi
+			buffer+=(${arraysrt[$i]})
+		done
+
+		# Everything inside the previous for-loop must run one last time for the last subtitle
+		fix_srt_subtitles
+
+		# Fix invalid times (duration < 0) for the last subtitle
+		if ((duration < 0)); then
+			if ((start > stop_prev1 - duration_prev1/2)) && ((stop < stop_prev1)); then		# OK start, invalid stop
+				((new_duration = 60 * characters))
+				if ((new_duration < 1000)); then
+					new_duration=1000
+				fi
+				((new_stop = start + new_duration))
+
+				j1="$h1:$m1:$s1,$f1"
+				j2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop / 3600000)) $(($(($new_stop % 3600000)) / 60000)) $(($(($new_stop % 60000)) / 1000)) $(($new_stop % 1000)))
+				line_new="$j1 --> $j2"
+				buffer[1]=$line_new
+
+				# Update the values
+				update_current_sub_values
+			elif ((start > stop_prev1)) && ((stop > stop_prev1)); then		# OK start, OK stop
+				j1="$h2:$m2:$s2,$f2"
+				j2="$h1:$m1:$s1,$f1"
+				line_new="$j1 --> $j2"
+				buffer[1]=$line_new
+
+				# Update the values
+				update_current_sub_values
+			fi
+		fi
+
+		# Fix subtitle out of place for the last subtitle
+		if [[ $buffer_prev1 ]] && ((start < start_prev1)) && ((stop < start_prev1)) && ((duration > 0)); then
+			((new_start = stop_prev1 + 40))
+			((new_duration = 60 * characters))
+			if ((new_duration < 1000)); then
+				new_duration=1000
+			fi
+			((new_stop = new_start + new_duration))
+
+			j1=$(printf "%02d:%02d:%02d,%03d" $(($new_start / 3600000)) $(($(($new_start % 3600000)) / 60000)) $(($(($new_start % 60000)) / 1000)) $(($new_start % 1000)))
+			j2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop / 3600000)) $(($(($new_stop % 3600000)) / 60000)) $(($(($new_stop % 60000)) / 1000)) $(($new_stop % 1000)))
+			line_new="$j1 --> $j2"
+			buffer[1]=$line_new
+
+			# Update the values
+			update_current_sub_values
+		fi
+
+		# Fix too long duration for the last subtitle
+		if [[ $buffer_prev1 ]] && ((stop_prev1 >= start)) && ((duration > 7000)); then
+			((new_duration = 150 * characters))
+			if ((new_duration < 7000)); then
+				new_duration=7000
+			fi
+
+			if ((new_duration < duration)); then
+				((new_start = stop - new_duration))
+
+				j1=$(printf "%02d:%02d:%02d,%03d" $(($new_start / 3600000)) $(($(($new_start % 3600000)) / 60000)) $(($(($new_start % 60000)) / 1000)) $(($new_start % 1000)))
+				j2="$h2:$m2:$s2,$f2"
+				line_new="$j1 --> $j2"
+				buffer[1]=$line_new
+
+				# Update the values
+				update_current_sub_values
+			fi
+		elif ((duration > 7000)); then
+			((new_duration = 150 * characters))
+			if ((new_duration < 7000)); then
+				new_duration=7000
+			fi
+
+			if ((new_duration < duration)); then
+				((new_stop = start + new_duration))
+
+				j1="$h1:$m1:$s1,$f1"
+				j2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop / 3600000)) $(($(($new_stop % 3600000)) / 60000)) $(($(($new_stop % 60000)) / 1000)) $(($new_stop % 1000)))
+				line_new="$j1 --> $j2"
+				buffer[1]=$line_new
+
+				# Update the values
+				update_current_sub_values
+			fi
+		fi
+
+		# Fix overlapping between buffer_prev1 and the last subtitle
+		if [[ $buffer_prev1 ]] && ((stop_prev1 >= start)); then
+			((overlapping = stop_prev1 - start))
+			((new_stop_prev1 = stop_prev1 - 20 - ms_per_char_prev1 * overlapping / ((ms_per_char_prev1 + ms_per_char)) ))
+			((new_start = new_stop_prev1 + 40))
+
+			if ((stop > new_start)); then
+				j_1="$h_1:$m_1:$s_1,$f_1"
+				j_2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop_prev1 / 3600000)) $(($(($new_stop_prev1 % 3600000)) / 60000)) $(($(($new_stop_prev1 % 60000)) / 1000)) $(($new_stop_prev1 % 1000)))
+				line_new="$j_1 --> $j_2"
+				buffer_prev1[1]=$line_new
+
+				j1=$(printf "%02d:%02d:%02d,%03d" $(($new_start / 3600000)) $(($(($new_start % 3600000)) / 60000)) $(($(($new_start % 60000)) / 1000)) $(($new_start % 1000)))
+				j2="$h2:$m2:$s2,$f2"
+				line_new="$j1 --> $j2"
+				buffer[1]=$line_new
+
+				# Update the values
+				update_prev1_values
+				update_current_sub_values
+			fi
+		fi
+
+		# Fix too short duration for the last subtitle
+		if ((ms_per_char < 60)); then
+			((new_duration = 60 * characters))
+			if ((new_duration < 500)); then
+				new_duration=500
+			fi
+			((new_stop = stop + new_duration - duration))
+
+			if ((new_stop > stop)); then
+				j1="$h1:$m1:$s1,$f1"
+				j2=$(printf "%02d:%02d:%02d,%03d" $(($new_stop / 3600000)) $(($(($new_stop % 3600000)) / 60000)) $(($(($new_stop % 60000)) / 1000)) $(($new_stop % 1000)))
+				line_new="$j1 --> $j2"
+				buffer[1]=$line_new
+			fi
+		fi
+
+		temp1arraysrt+=("${buffer_prev1[@]}")
+		temp1arraysrt+=("${buffer[@]}")
+
+		IFS=$old_IFS		# restore default field separator
+
+		# Write to the txt file the contents of array.
+		printf "%s\r\n" "${temp1arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+	elif [[ $subtitleis == "sub" ]]; then
+		# Read text file to arraysub
+		read_sub "$inputfilename"
+
+		IFS=$'\r'
+
+		regex_sub_remove1="(.*){[cCsSfFPyY]:[^}]*}(.*)"
+		regex_sub_remove2="(.*)\|(.*)"
+		unset sub_last
+		unset sub_prev1
+		unset sub_prev2
+
+		# These go into functions because they need to run more than one time
+		update_sub_prev2_values ()
+		{
+			if ! [[ $sub_prev2 =~ $regexsub1 ]] && [[ $sub_prev2 =~ $regexsub ]]; then
+				start_sub_prev2="${BASH_REMATCH[1]}"
+				stop_sub_prev2="${BASH_REMATCH[2]}"
+				((duration_sub_prev2 = 100 * ((stop_sub_prev2 - start_sub_prev2))))
+				((frames_per_char_sub_prev2 = duration_sub_prev2 / characters_sub_prev2))
+			fi
+		}
+
+		update_sub_prev1_values ()
+		{
+			if ! [[ $sub_prev1 =~ $regexsub1 ]] && [[ $sub_prev1 =~ $regexsub ]]; then
+				start_sub_prev1="${BASH_REMATCH[1]}"
+				stop_sub_prev1="${BASH_REMATCH[2]}"
+				((duration_sub_prev1 = 100 * ((stop_sub_prev1 - start_sub_prev1))))
+				((frames_per_char_sub_prev1 = duration_sub_prev1 / characters_sub_prev1))
+			fi
+		}
+
+		update_sub_last_values ()
+		{
+			if ! [[ $sub_last =~ $regexsub1 ]] && [[ $sub_last =~ $regexsub ]]; then
+				start_sub_last="${BASH_REMATCH[1]}"
+				stop_sub_last="${BASH_REMATCH[2]}"
+				((duration_sub_last = 100 * ((stop_sub_last - start_sub_last))))
+				((frames_per_char_sub_last = duration_sub_last / characters_sub_last))
+			fi
+		}
+
+		# This was put inside a function because it needs to run twice
+		fix_sub_subtitles ()
+		{
+			if [[ $sub_last ]]; then
+				# sub_prev2 contains the third to current subtitle
+				# sub_prev1 contains the second to current subtitle
+				# sub_last contains the current subtitle
+
+				if ! [[ $sub_prev2 =~ $regexsub1 ]] && [[ $sub_prev2 =~ $regexsub ]]; then
+					# Duration of sub_prev2 (in frames * 100)
+					start_sub_prev2="${BASH_REMATCH[1]}"
+					stop_sub_prev2="${BASH_REMATCH[2]}"
+					((duration_sub_prev2 = 100 * ((stop_sub_prev2 - start_sub_prev2))))
+
+					# Text of sub_prev2
+					text_sub_prev_2="${BASH_REMATCH[3]}"
+
+					# Number of characters of sub_prev2
+					characters_sub_prev2=0
+					line="${BASH_REMATCH[3]}"
+					while [[ $line =~ $regex_sub_remove1 ]]; do
+						line=${BASH_REMATCH[1]}${BASH_REMATCH[2]}
+					done
+					while [[ $line =~ $regex_sub_remove2 ]]; do
+						line=${BASH_REMATCH[1]}${BASH_REMATCH[2]}
+					done
+					characters_sub_prev2=${#line}
+
+					# Frames (* 100) per character of sub_prev2
+					((frames_per_char_sub_prev2 = duration_sub_prev2 / characters_sub_prev2))
+				fi
+
+				if ! [[ $sub_prev1 =~ $regexsub1 ]] && [[ $sub_prev1 =~ $regexsub ]]; then
+					# Duration of sub_prev1 (in frames * 100)
+					start_sub_prev1="${BASH_REMATCH[1]}"
+					stop_sub_prev1="${BASH_REMATCH[2]}"
+					((duration_sub_prev1 = 100 * ((stop_sub_prev1 - start_sub_prev1))))
+
+					# Text of sub_prev1
+					text_sub_prev_1="${BASH_REMATCH[3]}"
+
+					# Number of characters of sub_prev1
+					characters_sub_prev1=0
+					line="${BASH_REMATCH[3]}"
+					while [[ $line =~ $regex_sub_remove1 ]]; do
+						line=${BASH_REMATCH[1]}${BASH_REMATCH[2]}
+					done
+					while [[ $line =~ $regex_sub_remove2 ]]; do
+						line=${BASH_REMATCH[1]}${BASH_REMATCH[2]}
+					done
+					characters_sub_prev1=${#line}
+
+					# Frames (* 100) per character of sub_prev1
+					((frames_per_char_sub_prev1 = duration_sub_prev1 / characters_sub_prev1))
+				fi
+
+				if ! [[ $sub_last =~ $regexsub1 ]] && [[ $sub_last =~ $regexsub ]]; then
+					# Duration of sub_last (in frames * 100)
+					start_sub_last="${BASH_REMATCH[1]}"
+					stop_sub_last="${BASH_REMATCH[2]}"
+					((duration_sub_last = 100 * ((stop_sub_last - start_sub_last))))
+
+					# Text of sub_last
+					text_sub_last="${BASH_REMATCH[3]}"
+
+					# Number of characters of sub_last
+					characters_sub_last=0
+					line="${BASH_REMATCH[3]}"
+					while [[ $line =~ $regex_sub_remove1 ]]; do
+						line=${BASH_REMATCH[1]}${BASH_REMATCH[2]}
+					done
+					while [[ $line =~ $regex_sub_remove2 ]]; do
+						line=${BASH_REMATCH[1]}${BASH_REMATCH[2]}
+					done
+					characters_sub_last=${#line}
+
+					# Frames (* 100) per character of sub_last
+					((frames_per_char_sub_last = duration_sub_last / characters_sub_last))
+				fi
+
+
+				# Fix invalid times (duration < 0) for sub_prev1
+				if [[ $sub_prev1 ]] && ((duration_sub_prev1 < 0)); then
+					if ((start_sub_prev1 > start_sub_last)) && ((stop_sub_prev1 > stop_sub_prev2)) && ((stop_sub_prev1 < start_sub_last + duration_sub_last/200)); then			# invalid start, OK stop
+						((new_duration_sub_prev1 = 144 * characters_sub_prev1))		# duration is in frames * 100
+						if ((new_duration_sub_prev1 < 2400)); then
+							new_duration_sub_prev1=2400
+						fi
+						((new_start_sub_prev1 = stop_sub_prev1 - new_duration_sub_prev1/100))
+						if ((new_start_sub_prev1 <= stop_sub_prev2)); then
+							((new_start_sub_prev1 = stop_sub_prev2 + 1))
+						fi
+
+						sub_prev1="{$new_start_sub_prev1}{$stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					elif ((start_sub_prev1 > stop_sub_prev2 - duration_sub_prev2/200)) && ((start_sub_prev1 < start_sub_last)) && ((stop_sub_prev1 < stop_sub_prev2)); then		# OK start, invalid stop
+						((new_duration_sub_prev1 = 144 * characters_sub_prev1))		# duration is in frames * 100
+						if ((new_duration_sub_prev1 < 2400)); then
+							new_duration_sub_prev1=2400
+						fi
+						((new_stop_sub_prev1 = start_sub_prev1 + new_duration_sub_prev1/100))
+						if ((new_stop_sub_prev1 >= start_sub_last)); then
+							((new_stop_sub_prev1 = start_sub_last - 1))
+						fi
+
+						sub_prev1="{$start_sub_prev1}{$new_stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					elif ((start_sub_prev1 > stop_sub_prev2)) && ((start_sub_prev1 < start_sub_last)) && ((stop_sub_prev1 > stop_sub_prev2)) && ((stop_sub_prev1 < start_sub_last)); then		# OK start, OK stop
+						new_start_sub_prev1=$stop_sub_prev1
+						new_stop_sub_prev1=$start_sub_prev1
+
+						sub_prev1="{$new_start_sub_prev1}{$new_stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					else		# invalid start, invalid stop
+						((new_start_sub_prev1 = stop_sub_prev2 + 1))
+						((new_duration_sub_prev1 = 144 * characters_sub_prev1))		# duration is in frames * 100
+						if ((new_duration_sub_prev1 < 2400)); then
+							new_duration_sub_prev1=2400
+						fi
+						((new_stop_sub_prev1 = new_start_sub_prev1 + new_duration_sub_prev1/100))
+						if ((new_stop_sub_prev1 >= start_sub_last)); then
+							((new_stop_sub_prev1 = start_sub_last - 1))
+						fi
+
+						sub_prev1="{$new_start_sub_prev1}{$new_stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					fi
+				fi
+
+
+				# Fix subtitle out of place for sub_prev1
+				if [[ $sub_prev1 ]] && ((start_sub_prev1 > start_sub_last)) && ((stop_sub_prev1 > start_sub_last)) && ((duration_sub_prev1 > 0)) && ((stop_sub_prev2 < start_sub_last)); then
+					((new_start_sub_prev1 = stop_sub_prev2 + 1))
+					((new_duration_sub_prev1 = 144 * characters_sub_prev1))		# 60 milliseconds * 24 frames / 1000 milliseconds = 1.44
+					if ((new_duration_sub_prev1 < 2400)); then
+						new_duration_sub_prev1=2400
+					fi
+					((new_stop_sub_prev1 = new_start_sub_prev1 + new_duration_sub_prev1/100))
+					if ((new_stop_sub_prev1 >= start_sub_last)); then
+						((new_stop_sub_prev1 = start_sub_last - 1))
+					fi
+
+					if ((new_stop_sub_prev1 - new_start_sub_prev1 > 2)); then
+						sub_prev1="{$new_start_sub_prev1}{$new_stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					fi
+				elif [[ $sub_prev1 ]] && ((start_sub_prev1 < start_sub_prev2)) && ((stop_sub_prev1 < start_sub_prev2)) && ((duration_sub_prev1 > 0)); then
+					((new_start_sub_prev1 = stop_sub_prev2 + 1))
+					((new_duration_sub_prev1 = 144 * characters_sub_prev1))		# duration is in frames * 100
+					if ((new_duration_sub_prev1 < 2400)); then
+						new_duration_sub_prev1=2400
+					fi
+					((new_stop_sub_prev1 = new_start_sub_prev1 + new_duration_sub_prev1/100))
+					if ((new_stop_sub_prev1 >= start_sub_last)); then
+						((new_stop_sub_prev1 = start_sub_last - 1))
+					fi
+
+					if ((new_stop_sub_prev1 - new_start_sub_prev1 > 2)); then
+						sub_prev1="{$new_start_sub_prev1}{$new_stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					fi
+				fi
+
+
+				# Fix too long duration for sub_prev1. Max of 7 seconds or 0.15 seconds per character (assuming 24 frames per second)
+				# If there is overlapping with the sub_prev2 but not with sub_last, fix start time
+				# else, fix stop time
+				if [[ $sub_prev2 ]] && ((stop_sub_prev2 >= start_sub_prev1)) && ((stop_sub_prev1 <= start_sub_last)) && ((duration_sub_prev1/100 > 168)); then
+					((new_duration_sub_prev1 = 360 * characters_sub_prev1))		# 150 milliseconds * 24 frames / 1000 milliseconds = 3.6
+					if ((new_duration_sub_prev1 < 16800)); then
+						new_duration_sub_prev1=16800
+					fi
+
+					if ((new_duration_sub_prev1 < duration_sub_prev1)); then
+						((new_start_sub_prev1 = stop_sub_prev1 - new_duration_sub_prev1/100))
+
+						sub_prev1="{$new_start_sub_prev1}{$stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					fi
+				elif [[ $sub_prev1 ]] && ((duration_sub_prev1/100 > 168)); then
+					((new_duration_sub_prev1 = 360 * characters_sub_prev1))		# 150 milliseconds * 24 frames / 1000 milliseconds = 3.6
+					if ((new_duration_sub_prev1 < 16800)); then
+						new_duration_sub_prev1=16800
+					fi
+
+					if ((new_duration_sub_prev1 < duration_sub_prev1)); then
+						((new_stop_sub_prev1 = start_sub_prev1 + new_duration_sub_prev1/100))
+
+						sub_prev1="{$start_sub_prev1}{$new_stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					fi
+				fi
+
+
+				# Fix overlapping between sub_prev2 and sub_prev1. Leave 1 frame between subtitles.
+				if [[ $sub_prev2 ]] && ((stop_sub_prev2 >= start_sub_prev1)); then
+					((overlapping = stop_sub_prev2 - start_sub_prev1))
+					((new_stop_sub_prev2 = stop_sub_prev2 - frames_per_char_sub_prev2 * overlapping / ((frames_per_char_sub_prev2 + frames_per_char_sub_prev1)) ))
+					((new_start_sub_prev1 = new_stop_sub_prev2 + 1))
+
+					if ((stop_sub_prev1 > new_start_sub_prev1)); then
+						sub_prev2="{$start_sub_prev2}{$new_stop_sub_prev2}$text_sub_prev_2"
+						sub_prev1="{$new_start_sub_prev1}{$stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev2_values
+						update_sub_prev1_values
+					fi
+				fi
+
+
+				# Fix too short duration for sub_prev1. 0.06 seconds (1.44 frames) per character.
+				if [[ $sub_prev1 ]] && [[ $frames_per_char_sub_prev1 ]] && ((frames_per_char_sub_prev1 < 144)); then
+					((new_duration_sub_prev1 = 144 * characters_sub_prev1))
+					if ((new_duration_sub_prev1 < 1200)); then
+						new_duration_sub_prev1=1200
+					fi
+					((new_stop_sub_prev1 = stop_sub_prev1 + new_duration_sub_prev1/100 - duration_sub_prev1/100))
+
+					if ((new_stop_sub_prev1 >= start_sub_last)); then
+						((new_stop_sub_prev1 = start_sub_last - 1))
+					fi
+
+					if ((new_stop_sub_prev1 > stop_sub_prev1)); then
+						sub_prev1="{$start_sub_prev1}{$new_stop_sub_prev1}$text_sub_prev_1"
+
+						# Update the values
+						update_sub_prev1_values
+					fi
+				fi
+
+
+				# Merge subtitles with more than 2 lines into 1 line, except dialogs, empty lines and lines that start with a lowercase tag (work in sub_last)
+				IFS=$'|'
+				read -r -a array_text_sub_last <<< "$text_sub_last"
+				IFS=$'\r'
+
+				if ((${#array_text_sub_last[@]} >= 3)); then
+					unset text_sub_last
+					text_sub_last="${array_text_sub_last[0]}"
+
+					for ((j=1; j<${#array_text_sub_last[@]}; j++)); do
+						if [[ ${array_text_sub_last[((j-1))]} =~ ^{[csfy]:[^}]*} ]] || [[ ${array_text_sub_last[$j]} =~ ^{[csfy]:[^}]*} ]] || [[ ${array_text_sub_last[$j]} =~ ^- ]] || [[ ${array_text_sub_last[$j]} =~ $regexemptyline ]] || [[ $text_sub_last == *"|" ]]; then
+							text_sub_last="$text_sub_last|${array_text_sub_last[$j]}"
+						else
+							text_sub_last="$text_sub_last ${array_text_sub_last[$j]}"
+							((characters_sub_last += 1))
+						fi
+					done
+
+					sub_last="{$start_sub_last}{$stop_sub_last}$text_sub_last$cr"
+				fi
+
+
+				# Split too long lines with over 48 characters (work in sub_last)
+				if ((${#array_text_sub_last[@]} == 1)) && [[ ${array_text_sub_last[0]} == *" "* ]] && ((characters_sub_last > 48)); then
+					characters_with_tags=${#array_text_sub_last[0]}
+					((tag_characters = characters_with_tags - characters_sub_last))
+
+					((linecenter = 1 + characters_with_tags/2 + tag_characters/2))
+
+					# Replace lowercase tags with uppercase tags. The tags must change to affect both lines
+					if [[ ${array_text_sub_last[0]} =~ ^({[CSFPY]:[^}]*})*(({[csfy]:[^}]*})+) ]]; then
+						unset tagsforreplace
+						IFS=$'}'
+						read -r -a array_tagsforreplace <<< "${BASH_REMATCH[2]}"
+						IFS=$'\r'
+
+						for ((m=0; m<${#array_tagsforreplace[@]}; m++)); do
+							if [[ "${array_tagsforreplace[$m]}}" =~ ^({[csfy])(:[^}]*}) ]]; then
+								tagsforreplace="$tagsforreplace${BASH_REMATCH[1]^^}${BASH_REMATCH[2]}"
+							fi
+						done
+
+						if [[ ${array_text_sub_last[0]} =~ ^(({[CSFPY]:[^}]*})*)(({[csfy]:[^}]*})+)(.*) ]]; then
+							bigline="${BASH_REMATCH[1]}$tagsforreplace${BASH_REMATCH[5]}"
+						fi
+					else
+						bigline=${array_text_sub_last[0]}
+					fi
+
+					halfline1=${bigline:0:linecenter}
+
+					if [[ ${bigline:linecenter:1} == " " ]]; then
+						splitspace=$linecenter
+					else
+						# Find the first space before center
+						spacebefore=0
+						for ((k=${#halfline1}-1; k>=0; k--)); do
+							((spacebefore++))
+							if [[ ${halfline1:k:1} == " " ]]; then
+								break
+							fi
+						done
+
+						# Find the first space after center
+						halfline2=${bigline:linecenter}
+						centertospace="${halfline2%% *}"
+						((spaceafter = ${#centertospace}))
+
+						if ((spaceafter <= spacebefore)); then
+							((splitspace = linecenter + spaceafter))
+						else
+							((splitspace = linecenter - spacebefore))
+						fi
+					fi
+
+					# Split the long line
+					text_sub_last="${bigline:0:splitspace}|${bigline:splitspace+1}"
+
+					sub_last="{$start_sub_last}{$stop_sub_last}$text_sub_last$cr"
+				fi
+
+				unset array_text_sub_last
+
+				# Add sub_prev2 to temp1arraysub
+				temp1arraysub+=($sub_prev2)
+			fi
+		}
+
+		for ((i=0; i<=${#arraysub[@]}; i++)); do
+			if [[ ${arraysub[$i]} =~ $regexsub ]]; then
+
+				fix_sub_subtitles
+
+				sub_prev2=$sub_prev1
+				sub_prev1=$sub_last
+				sub_last=${arraysub[$i]}
+			fi
+		done
+
+		# Everything inside the previous for-loop must run one last time for the last subtitle
+		fix_sub_subtitles
+
+		# Fix invalid times (duration < 0) for the last subtitle
+		if ((duration_sub_last < 0)); then
+			if ((start_sub_last > stop_sub_prev1 - duration_sub_prev1/200)) && ((stop_sub_last < stop_sub_prev1)); then		# OK start, invalid stop
+				((new_duration_sub_last = 144 * characters_sub_last))		# duration is in frames * 100
+				if ((new_duration_sub_last < 2400)); then
+					new_duration_sub_last=2400
+				fi
+				((new_stop_sub_last = start_sub_last + new_duration_sub_last/100))
+
+				sub_last="{$start_sub_last}{$new_stop_sub_last}$text_sub_last"
+
+				# Update the values
+				update_sub_last_values
+			elif ((start_sub_last > stop_sub_prev1)) && ((stop_sub_last > stop_sub_prev1)); then		# OK start, OK stop
+				new_start_sub_last=$stop_sub_last
+				new_stop_sub_last=$start_sub_last
+
+				sub_last="{$new_start_sub_last}{$new_stop_sub_last}$text_sub_last"
+
+				# Update the values
+				update_sub_last_values
+			fi
+		fi
+
+		# Fix subtitle out of place for the last subtitle
+		if [[ $sub_prev1 ]] && ((start_sub_last < start_sub_prev1)) && ((stop_sub_last < start_sub_prev1)) && ((duration_sub_last > 0)); then
+			((new_start_sub_last = stop_sub_prev1 + 1))
+			((new_duration_sub_last = 144 * characters_sub_last))		# duration is in frames * 100
+			if ((new_duration_sub_last < 2400)); then
+				new_duration_sub_last=2400
+			fi
+			((new_stop_sub_last = new_start_sub_last + new_duration_sub_last/100))
+
+			if ((new_stop_sub_last - new_start_sub_last > 2)); then
+				sub_last="{$new_start_sub_last}{$new_stop_sub_last}$text_sub_last"
+
+				# Update the values
+				update_sub_last_values
+			fi
+		fi
+
+		# Fix too long duration for the last subtitle
+		if [[ $sub_prev1 ]] && ((stop_sub_prev1 >= start_sub_last)) && ((duration_sub_last/100 > 168)); then
+			((new_duration_sub_last = 360 * characters_sub_last))		# 150 milliseconds * 24 frames / 1000 milliseconds = 3.6
+			if ((new_duration_sub_last < 16800)); then
+				new_duration_sub_last=16800
+			fi
+
+			if ((new_duration_sub_last < duration_sub_last)); then
+				((new_start_sub_last = stop_sub_last - new_duration_sub_last/100))
+
+				sub_last="{$new_start_sub_last}{$stop_sub_last}$text_sub_last"
+
+				# Update the values
+				update_sub_last_values
+			fi
+		elif ((duration_sub_last/100 > 168)); then
+			((new_duration_sub_last = 360 * characters_sub_last))		# 150 milliseconds * 24 frames / 1000 milliseconds = 3.6
+			if ((new_duration_sub_last < 16800)); then
+				new_duration_sub_last=16800
+			fi
+
+			if ((new_duration_sub_last < duration_sub_last)); then
+				((new_stop_sub_last = start_sub_last + new_duration_sub_last/100))
+
+				sub_last="{$start_sub_last}{$new_stop_sub_last}$text_sub_last"
+
+				# Update the values
+				update_sub_last_values
+			fi
+		fi
+
+		# Fix overlapping between sub_prev1 and the last subtitle
+		if [[ $sub_prev1 ]] && ((stop_sub_prev1 >= start_sub_last)); then
+			((overlapping = stop_sub_prev1 - start_sub_last))
+			((new_stop_sub_prev1 = stop_sub_prev1 - frames_per_char_sub_prev1 * overlapping / ((frames_per_char_sub_prev1 + frames_per_char_sub_last)) ))
+			((new_start_sub_last = new_stop_sub_prev1 + 1))
+
+			if ((stop_sub_last > new_start_sub_last)); then
+				sub_prev1="{$start_sub_prev1}{$new_stop_sub_prev1}$text_sub_prev_1"
+				sub_last="{$new_start_sub_last}{$stop_sub_last}$text_sub_last"
+
+				# Update the values
+				update_sub_prev1_values
+				update_sub_last_values
+			fi
+		fi
+
+		# Fix too short duration for the last subtitle
+		if [[ $frames_per_char_sub_last ]] && ((frames_per_char_sub_last < 144)); then
+			((new_duration_sub_last = 144 * characters_sub_last))
+			if ((new_duration_sub_last < 1200)); then
+				new_duration_sub_last=1200
+			fi
+			((new_stop_sub_last = stop_sub_last + new_duration_sub_last/100 - duration_sub_last/100))
+
+			if ((new_stop_sub_last > stop_sub_last)); then
+				sub_last="{$start_sub_last}{$new_stop_sub_last}$text_sub_last"
+
+				# Update the values
+				update_sub_last_values
+			fi
+		fi
+
+
+		temp1arraysub+=($sub_prev1)
+		temp1arraysub+=($sub_last)
+
+		IFS=$old_IFS		# restore default field separator
+
+		# Write to the txt file the contents of array.
+		printf "%s\r\n" "${temp1arraysub[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+	fi
+}
+
 
 # Check for incompatible parameters
 if [[ $inputfilename ]] && [[ $inputdirectory ]]; then
@@ -4354,6 +5568,10 @@ master_function ()
 
 	if [[ $deletetextsforHI ]]; then
 		delete_HI; (($? != 0)) && return 1
+	fi
+
+	if [[ $fixerrors ]]; then
+		fix_common_errors; (($? != 0)) && return 1
 	fi
 
 	if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
@@ -4524,6 +5742,10 @@ if [[ $inputdirectory ]]; then
 
 		if [[ $deletetextsforHI ]]; then
 			delete_HI
+		fi
+
+		if [[ $fixerrors ]]; then
+			fix_common_errors
 		fi
 
 		if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
