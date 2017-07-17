@@ -186,6 +186,15 @@ ${cyan}PARAMETERS${normal}
       If ~/.subeditrc exists (you have to create it manually), then it will be used instead of /etc/subeditrc.
       Works with srt and sub.
 
+  ${bold}-k '([{?mM'${normal}
+      Delete text for hearing impaired.
+      The ([{? characters are the symbols that the text for the hearing impaired is enclosed by.
+      \"m\" and \"M\" are for music symbols. With \"m\" only the music symbols are deleted. With \"M\" the text that
+      is enclosed by the music symbols is deleted too.
+      Use only the symbol(s) that are needed for each subtitle file.
+      The single quotes are necessary.
+      Works with srt and sub.
+
   ${bold}-h [Switch]${normal}
       Display help.
 
@@ -201,7 +210,8 @@ text2="${cyan}NOTES${normal}
   • -i (input file) or -d (input directory) is required in every case.
   • If only -i parameter is used then the subtitle goes through a basic clean-up (empty subtitles are removed etc.)
   • -1 and -2 parameters (adjust time) can be combined (equivalent of using just the -a parameter).
-  • -f, -F (find), -e, -E (replace) and -c (clean trash) parameters work with both srt and sub subtitle files.
+  • -f, -F (find), -e, -E (replace), -c (clean trash) and -k (delete text for HI) parameters work with
+  both srt and sub subtitle files.
   • You can put different parameters in the same command and they'll run one after the other.
   • Bellow you'll find examples for every parameter.\n\n\n"
 
@@ -479,6 +489,33 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   Same as above, but also processes subtitles found in subdirectories (unlimited depth) as well.\n\n\n"
 
 
+text2+="  ${bold}Delete text for hearing impaired${normal}
+
+  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -k '('
+  Deletes text for hearing impaired that's enclosed in parentheses.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -k '['
+  Deletes text for hearing impaired that's enclosed in brackets.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -k '([{?'
+  Deletes text for hearing impaired that's enclosed in all ([{? symbols.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -k 'm'
+  Deletes the music symbols ¶♪♫.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -k 'M'
+  Deletes text that's enclosed in the music symbols ¶♪♫.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -k '{M'
+  Deletes text that's enclosed in braces and the music symbols ¶♪♫.\n\n\n"
+
+
 text2+="${cyan}ABOUT${normal}
   Authors:      ${authors[0]}
                 ${authors[1]}
@@ -494,12 +531,12 @@ exit 0
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:XchH" opt); then
+if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:hH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:XchH" parameter; do
+while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:hH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		d) inputdirectory=$OPTARG ;;
@@ -532,6 +569,7 @@ while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:XchH" parameter; do
 		x) splitsrt=$OPTARG ;;
 		X) splittime="True" ;;
 		c) cleantrash="True" ;;
+		k) deletetextsforHI=$OPTARG ;;
 		h) get_help ;;
 		H) longhelp="True"; get_help ;;
 		?) echo -e "Parameter -$OPTARG is unknown or an argument is missing.\nTry 'subedit -h' for more information."; exit 1 ;;
@@ -4011,6 +4049,187 @@ clean_trash ()
 }
 
 
+delete_HI ()
+{
+	# Get the symbols that enclose the text to be removed
+	regexHIsymbols="^([(\[{?mM]+)$"
+
+	if [[ $deletetextsforHI =~ $regexHIsymbols ]]; then
+		HIsymbols="${BASH_REMATCH[1]}"
+	else
+		echo -e "Error: Syntax must be like '([{?mM'. The single quotes are necessary.\nThe ([{? characters are the symbols that the text for the hearing impaired is enclosed by.\n'm' and 'M' are for music symbols. With 'm' only the music symbols are deleted.\nWith 'M' the text that is enclosed by the music symbols is deleted too.\nUse only the symbol(s) that are needed for each subtitle file."
+		exit 1
+	fi
+
+
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
+	# Check if the srt or sub is OK
+	check_srt_and_sub "$inputfilename" "Deleting text for hearing impaired for \"$inputfilename\""
+
+	# Exit this function if the return code of check_srt_and_sub is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
+
+	IFS=$'\n'			# new field separator, the end of line
+
+	if [[ $subtitleis == "srt" ]]; then
+		# Read text file to arraysrt
+		arraysrt=()
+		for line in $(iconv -f $encoding -t utf-8 "$inputfilename" 2> /dev/null); do
+			arraysrt+=($line)
+		done
+
+		# Delete the text that is enclosed by the defined symbols
+		tempvar=$(printf "%s\n" "${arraysrt[@]}")
+
+		if [[ $HIsymbols == *"("* ]]; then
+			tempvar=$(echo "$tempvar" |
+			sed -e '/^[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}([^)]*)[[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}\($cr\)\{0,1\}$/d'\
+			-e s'/[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}([^)]*)[[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}/ /'g\
+			-e s'/^[ ]\|[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		if [[ $HIsymbols == *"["* ]]; then
+			tempvar=$(echo "$tempvar" |
+			sed -e '/^[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}\[[^]]*\][[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}\($cr\)\{0,1\}$/d'\
+			-e s'/[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}\[[^]]*\][[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}/ /'g\
+			-e s'/^[ ]\|[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		if [[ $HIsymbols == *"{"* ]]; then
+			tempvar=$(echo "$tempvar" |
+			sed -e '/^[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}{[^}]*}[[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}\($cr\)\{0,1\}$/d'\
+			-e s'/[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}{[^}]*}[[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}/ /'g\
+			-e s'/^[ ]\|[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		if [[ $HIsymbols == *"?"* ]]; then
+			tempvar=$(echo "$tempvar" |
+			sed -e '/^[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}?[^?]*?[[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}\($cr\)\{0,1\}$/d'\
+			-e s'/[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}?[^?]*?[[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}/ /'g\
+			-e s'/^[ ]\|[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		if [[ $HIsymbols == *"M"* ]]; then
+			tempvar=$(echo "$tempvar" |
+			sed -e '/^[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}[¶♪♫][^¶♪♫]*[¶♪♫][[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}\($cr\)\{0,1\}$/d'\
+			-e s'/[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}[¶♪♫][^¶♪♫]*[¶♪♫][[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}/ /'g\
+			-e '/^[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}[#][^#]*[#][[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}\($cr\)\{0,1\}$/d'\
+			-e s'/[[:blank:]]\{0,\}\(<[^>]*>\)\{0,\}[[:blank:]]\{0,\}[#][^#]*[#][[:blank:]]\{0,\}\(<\/[^>]*>\)\{0,\}[[:blank:]]\{0,\}/ /'g\
+			-e s'/^[ ]\|[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		# Delete the music symbols
+		if [[ $HIsymbols == *"m"* ]]; then
+			tempvar=$(echo "$tempvar" | sed -e s'/[[:blank:]]\{0,\}[¶♪♫][[:blank:]]\{0,\}/ /'g\
+			-e s'/^[ ]\|[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		# Export what we have so far to inputfilename
+		printf "%s\n" "$tempvar" > "$inputfilename"
+
+		unset tempvar
+
+		# We must unset this so that read_srt fixes the line endings
+		unset subtitleis
+
+		# read_srt removes any empty subtitles
+		read_srt "$inputfilename"
+
+		# We must set this again, or the basic_clean_up will run after this
+		subtitleis="srt"
+
+		# Export to inputfilename
+		printf "%s\n" "${arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+	elif [[ $subtitleis == "sub" ]]; then
+		# Read text file to arraysub
+		arraysub=()
+		for line in $(iconv -f $encoding -t utf-8 "$inputfilename" 2> /dev/null); do
+			arraysub+=($line)
+		done
+
+		# Delete the text that is enclosed by the defined symbols
+		tempvar=$(printf "%s\n" "${arraysub[@]}")
+
+		if [[ $HIsymbols == *"("* ]]; then
+			tempvar=$(echo "$tempvar" | sed -e s'/[[:blank:]]\{0,\}([^)]*)[[:blank:]]\{0,\}/ /'g\
+			-e s'/\({[0-9]\+}{[0-9]\+}\)\({[cCsSfFPyY]:[^}]*}\)* \(.*\)/\1\2\3/g'\
+			-e s'/[ ]\{0,1\}[|][ ]\{0,1\}/|/g'\
+			-e s'/[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		if [[ $HIsymbols == *"["* ]]; then
+			tempvar=$(echo "$tempvar" | sed -e s'/[[:blank:]]\{0,\}\[[^]]*\][[:blank:]]\{0,\}/ /'g\
+			-e s'/\({[0-9]\+}{[0-9]\+}\)\({[cCsSfFPyY]:[^}]*}\)* \(.*\)/\1\2\3/g'\
+			-e s'/[ ]\{0,1\}[|][ ]\{0,1\}/|/g'\
+			-e s'/[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		if [[ $HIsymbols == *"{"* ]]; then
+			tempvar=$(echo "$tempvar" | sed -e s'/^{\([0-9]\+\)}{\([0-9]\+\)}/*(*\1*)**(*\2*)*/'g\
+			-e s'/{\([cCsSfFPyY]:[^}]*\)}/*(*\1*)*/'g\
+			-e s'/[[:blank:]]\{0,\}{[^}]*}[[:blank:]]\{0,\}/ /'g\
+			-e s'/^\*(\*\([0-9]\+\)\*)\*\*(\*\([0-9]\+\)\*)\*/{\1}{\2}/'g\
+			-e s'/\*(\*\([cCsSfFPyY]:[^*]*\)\*)\*/{\1}/'g\
+			-e s'/\({[0-9]\+}{[0-9]\+}\)\({[cCsSfFPyY]:[^}]*}\)* \(.*\)/\1\2\3/g'\
+			-e s'/[ ]\{0,1\}[|][ ]\{0,1\}/|/g'\
+			-e s'/[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		if [[ $HIsymbols == *"?"* ]]; then
+			tempvar=$(echo "$tempvar" | sed -e s'/[[:blank:]]\{0,\}?[^?]*?[[:blank:]]\{0,\}/ /'g\
+			-e s'/\({[0-9]\+}{[0-9]\+}\)\({[cCsSfFPyY]:[^}]*}\)* \(.*\)/\1\2\3/g'\
+			-e s'/[ ]\{0,1\}[|][ ]\{0,1\}/|/g'\
+			-e s'/[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		if [[ $HIsymbols == *"M"* ]]; then
+			tempvar=$(echo "$tempvar" | sed -e s'/[[:blank:]]\{0,\}[¶♪♫][^¶♪♫]*[¶♪♫][[:blank:]]\{0,\}/ /'g\
+			-e s'/[[:blank:]]\{0,\}[#][^#]*[#][[:blank:]]\{0,\}/ /'g\
+			-e s'/\({[0-9]\+}{[0-9]\+}\)\({[cCsSfFPyY]:[^}]*}\)* \(.*\)/\1\2\3/g'\
+			-e s'/[ ]\{0,1\}[|][ ]\{0,1\}/|/g'\
+			-e s'/[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		# Delete the music symbols
+		if [[ $HIsymbols == *"m"* ]]; then
+			tempvar=$(echo "$tempvar" | sed -e s'/[[:blank:]]\{0,\}[¶♪♫][[:blank:]]\{0,\}/ /'g\
+			-e s'/\({[0-9]\+}{[0-9]\+}\)\({[cCsSfFPyY]:[^}]*}\)* \(.*\)/\1\2\3/g'\
+			-e s'/[ ]\{0,1\}[|][ ]\{0,1\}/|/g'\
+			-e s'/[ ]\($cr\)\{0,1\}$//g')
+		fi
+
+		# Export what we have so far to inputfilename
+		printf "%s\n" "$tempvar" | iconv -f utf-8 -t $encoding > "$inputfilename"
+
+		unset tempvar
+
+		# We must unset this so that read_sub fixes the line endings
+		unset subtitleis
+
+		# read_sub removes any empty subtitles
+		read_sub "$inputfilename"
+
+		# We must set this again, or the basic_clean_up will run after this
+		subtitleis="sub"
+
+		# Export to inputfilename
+		printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+	fi
+
+	IFS=$old_IFS		# restore default field separator
+}
+
+
 if [[ $inputfilename ]]; then
 	if [[ $shifttime ]]; then
 		shift_time; (($? != 0)) && exit 1
@@ -4056,6 +4275,10 @@ if [[ $inputfilename ]]; then
 
 	if [[ $cleantrash ]]; then
 		clean_trash; (($? != 0)) && exit 1
+	fi
+
+	if [[ $deletetextsforHI ]]; then
+		delete_HI; (($? != 0)) && exit 1
 	fi
 
 	if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
@@ -4164,6 +4387,10 @@ if [[ $inputdirectory ]]; then
 
 		if [[ $cleantrash ]]; then
 			clean_trash
+		fi
+
+		if [[ $deletetextsforHI ]]; then
+			delete_HI
 		fi
 
 		if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
