@@ -2156,7 +2156,7 @@ sub2_srt ()
 						*"i"*) justtext="<i>"$justtext"</i>"; arraysubs[$j]=$justtext ;;
 					esac
 
-					# COLOR is the tag that affect all lines and color the tag that affect only one line.
+					# COLOR is the tag that affects all lines and color is the tag that affects only one line.
 					COLOR=""
 					color=""
 
