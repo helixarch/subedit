@@ -73,7 +73,7 @@ ${cyan}NAME${normal}
 ${cyan}DESCRIPTION${normal}
   Command line srt subtitle editor.
 
-  The script generally works with srt (SubRip) but a few parameters work with sub (MicroDVD) subtitle files too.
+  The script generally works with srt (SubRip), but a few parameters work with sub (MicroDVD) subtitle files too.
 
 
 ${cyan}PARAMETERS${normal}
@@ -90,7 +90,7 @@ ${cyan}PARAMETERS${normal}
       Searches recursively for subtitle files in directory given with -d parameter.
 
   ${bold}-b [Switch]${normal}
-      Backup input file. Makes a copy of the input file in the same directory with the .bak sufix.
+      Backup input file. Makes a copy of the input file in the same directory with the .bak suffix.
       If the backup already exists, it does nothing. If -b is not set and the backup file exists, it is removed.
       Can be used with any other parameter.
 
@@ -155,7 +155,7 @@ ${cyan}PARAMETERS${normal}
 
   ${bold}-U film${normal} or ${bold}ntsc${normal} or ${bold}pal${normal} or ${bold}custom fps${normal}
       Convert srt to sub. Pal = 25, film = 23.976, ntsc = 29.970. Custom fps can be integer or float number.
-      Same as the -u parameter above but also ignores any srt tags that were not converted to respective
+      Same as the -u parameter above, but also ignores any srt tags that were not converted to respective
       sub tags. This is the behavior that you'd expect from other subtitle edit programs.
 
   ${bold}-j \"Input file\"${normal}
@@ -431,7 +431,7 @@ text2+="  ${bold}Convert srt to sub${normal}
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -i foo.srt -U pal
-  Same as above but any srt tags that were not converted to sub tags will not pass to the .sub file.\n\n"
+  Same as above, but any srt tags that were not converted to sub tags will not pass to the .sub file.\n\n"
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -i foo.srt -u film
@@ -671,9 +671,9 @@ check_file ()
 
 	# Detect encoding of input file
 	# We use both file and uchardet (if it is available) because no one is perfect.
-	# file doesn't get right some non-unicode encodings but for UTF-16 is preferable
+	# file doesn't get right some non-unicode encodings, but for UTF-16 is preferable
 	# than uchardet because the latter doesn't specify if it is UTF-16BE or UTF-16LE.
-	# uchardet doesn't exist for Cygwin but one place you can find a Windows binary is here:
+	# uchardet doesn't exist for Cygwin, but one place you can find a Windows binary is here:
 	# https://sourceforge.net/projects/cbadvanced/files/Repo/
 	# For subedit to be able to use uchardet put uchardet.exe inside /bin directory in the Cygwin installation folder.
 	# This uchardet has 2 problems: It needs windows-style path and it produces windows-style line endings.
@@ -1955,14 +1955,14 @@ replace_text ()
 		replace2=$replace4
 	fi
 
-	# Define forbitten and allowed regex
-	regexforbittensynbols="^[0-9<>\/:{}\$=#-,]+$"
+	# Define forbidden and allowed regex
+	regexforbiddensynbols="^[0-9<>\/:{}\$=#-,]+$"
 	regexallowedtimes="^[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]$"
 	regexallowedframes="^\{[0-9]+\}\{[0-9]+\}$"
 	regexallowedtime="^[0-9][0-9]:[0-9][0-9]:[0-9][0-9],[0-9][0-9][0-9]$"
 	regexallowedframe="^\{[0-9]+\}$"
 
-	if ! [[  $replace1 =~  $regexallowedtimes ]] && ! [[  $replace1 =~  $regexallowedframes ]] && ! [[  $replace1 =~  $regexallowedtime ]] && ! [[  $replace1 =~  $regexallowedframe ]] && [[ $replace1 =~ $regexforbittensynbols ]]; then
+	if ! [[  $replace1 =~  $regexallowedtimes ]] && ! [[  $replace1 =~  $regexallowedframes ]] && ! [[  $replace1 =~  $regexallowedtime ]] && ! [[  $replace1 =~  $regexallowedframe ]] && [[ $replace1 =~ $regexforbiddensynbols ]]; then
 		echo "${red}Error: You cannot replace this${normal}"; exit 1
 	fi
 
@@ -2201,7 +2201,7 @@ sub2_srt ()
 						color=""
 					fi
 
-					# SIZE is the tag that affect all lines and size the tag that affect only one line.
+					# SIZE is the tag that affects all lines and size is the tag that affects only one line.
 					SIZE=""
 					size=""
 
@@ -2340,7 +2340,7 @@ srt2_sub ()
 	done
 
 
-	# Assosiative array of color names converted to values used by the sub subtitles
+	# Associative array of color names converted to values used by the sub subtitles
 	declare -A colornames
 
 	colornames[indianred]="\$5C5CCD"
@@ -3485,7 +3485,7 @@ clean_trash ()
 		# replace english characters with same-looking greek characters when necessary (x2),
 		# remove spaces before punctuation marks (only for latin/greek text, when appropriate),
 		# insert spaces after punctuation marks (only for latin/greek text, when appropriate),
-		# remove unneded periods,
+		# remove unneeded periods,
 		# fix missing '[',
 		# capitalize the first letter after '.', '!' and '?',
 		# capitalize the first letter, if it's greek, after ';',
@@ -3843,7 +3843,7 @@ clean_trash ()
 		# replace english characters with same-looking greek characters when necessary (x2),
 		# remove spaces before punctuation marks (only for latin/greek text, when appropriate),
 		# insert spaces after punctuation marks (only for latin/greek text, when appropriate),
-		# remove unneded periods,
+		# remove unneeded periods,
 		# fix missing '[',
 		# capitalize the first letter after '.', '!' and '?',
 		# capitalize the first letter, if it's greek, after ';',
@@ -4155,7 +4155,7 @@ delete_HI ()
 	if [[ $deletetextsforHI =~ $regexHIsymbols ]]; then
 		HIsymbols="${BASH_REMATCH[1]}"
 	else
-		echo -e "${red}Error: Syntax must be like '([{?mM'. The single quotes are necessary.\nThe ([{? characters are the symbols that the text for the hearing impaired is enclosed by.\n'm' and 'M' are for music symbols. With 'm' only the music symbols are deleted.\nWith 'M' the text that is enclosed by the music symbols is deleted too.\nUse only the symbol(s) that are needed for each subtitle file.${normal}"
+		echo -e "${red}Error: Syntax must be like '([{?mM'. The single quotes are necessary.\nThe ([{? characters are the symbols that the text for the hearing impaired is enclosed by.\n'm' and 'M' are for music symbols.\nWith 'm' only the music symbols are deleted.\nWith 'M' the text that is enclosed by the music symbols is deleted too.\nUse only the symbol(s) that are needed for each subtitle file.${normal}"
 		exit 1
 	fi
 
@@ -4169,7 +4169,7 @@ delete_HI ()
 	fi
 
 	# Check if the srt or sub is OK
-	check_srt_and_sub "$inputfilename" "Deleting text for hearing impaired for \"$inputfilename\""
+	check_srt_and_sub "$inputfilename" "Deleting text for hearing impaired in \"$inputfilename\""
 
 	# Exit this function if the return code of check_srt_and_sub is not 0
 	if (($? != 0)); then
