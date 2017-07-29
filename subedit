@@ -78,111 +78,154 @@ ${cyan}DESCRIPTION${normal}
 
 ${cyan}PARAMETERS${normal}
   ${bold}-i \"Input file\"${normal}
-      Subtitle file to process. Accepts srt or sub files, depending on what other parameter is used.
+      Subtitle file to process.
+      Accepts srt or sub files, depending on what other parameter is used.
+      Supports wildcards and relative or absolute paths.
+      Open a subtitle file with no other parameters to perform basic clean-up.
       Does not work with -D parameter (synchronize with directory) and -r parameter (recurse).
 
   ${bold}-d \"Input directory\"${normal}
-      Directory containing subtitle files to process. Can contain srt, sub or both subtitle types.
+      Directory containing subtitle files to process.
+      Can contain srt, sub or both subtitle types.
+      Supports wildcards and relative or absolute paths.
+      Open a directory with no other parameters to perform basic clean-up to all contained subtitle files.
       Works with all parameters except with -y (synchronize with file) and -j (join two srt subtitles).
       Instead of Synchronize with file you can use Synchronize with directory (-D parameter).
 
   ${bold}-r [Switch]${normal}
-      Searches recursively for subtitle files in directory given with -d parameter.
+      Recurse.
+      Optional switch, to be used with -d.
+      Searches recursively for subtitle files.
 
   ${bold}-b [Switch]${normal}
-      Backup input file. Makes a copy of the input file in the same directory with the .bak suffix.
+      Backup input file.
+      Optional switch that can be used with any other parameter.
+      Makes a copy of the input file in the same directory with the .bak suffix.
       If the backup already exists, it does nothing. If -b is not set and the backup file exists, it is removed.
-      Can be used with any other parameter.
 
   ${bold}-s (+/-/a/z)hh:mm:ss,fff${normal}
-      Shift time. Plus sign (or no sign at all) adds time, where the minus sign subtracts time.
+      Shift time.
+      Plus sign (or no sign at all) adds time, where the minus sign subtracts time.
       \"a\" and \"z\" indicate absolute time value for the beginning and end time of the subtitle file
       respectively. In this case the shifting time will be calculated.
 
   ${bold}-p [Switch]${normal}
+      Convert fps.
       Change the fps from NTSC (23.976/29.970) to PAL (25).
 
   ${bold}-n [Switch]${normal}
+      Convert fps.
       Change the fps from PAL (25) to NTSC (23.976/29.970).
 
   ${bold}-a (+/-)hh:mm:ss,fff (+/-)hh:mm:ss,fff${normal}
-      Adjust time. Beginning and end time will be set to these values and the rest will be adjusted proportionally.
+      Adjust time.
+      Beginning and end time will be set to these values and the rest will be adjusted proportionally.
       The time value is absolute if you don't use the +/- and will be shifted if you do use either sign.
 
   ${bold}-1 (+/-)hh:mm:ss,fff${normal}
-      Adjust time. Beginning time will be set to this value and the rest will be adjusted proportionally.
+      Adjust time.
+      Beginning time will be set to this value and the rest will be adjusted proportionally.
       The time value is absolute if you don't use the +/- and will be shifted if you do use either sign.
 
   ${bold}-2 (+/-)hh:mm:ss,fff${normal}
-      Adjust time. End time will be set to this value and the rest will be adjusted proportionally.
+      Adjust time.
+      End time will be set to this value and the rest will be adjusted proportionally.
       The time value is absolute if you don't use the +/- and will be shifted if you do use either sign.
+      -1 and -2 parameters can be combined (equivalent of using just the -a parameter).
 
   ${bold}-y \"Input file\"${normal}
-      Synchronize with file. The subtitle times of the srt given with -i parameter will be adjusted with
-      beginning and end time of this srt.
+      Synchronize with file.
+      Supports relative or absolute paths.
+      The subtitle times of the srt given with -i parameter will be adjusted with beginning and end time
+      of this srt.
 
   ${bold}-D \"Input directory\"${normal}
-      Synchronize with directory. To be used only with -d parameter.
+      Synchronize with directory.
+      To be used only with -d parameter.
       This directory contains srt subtitle files with correct times.
+      Supports relative or absolute paths.
       The two directories (given with -d and -D parameters) must contain srt subtitle files with the same names.
       Synchronizes each srt subtitle file in the input directory (-d) with the srt subtitle file with the
       same name that's in the directory (-D).
 
   ${bold}-Y [Switch]${normal}
-      Synchronize subtitle times one by one. Optional switch to be used with -y and -D. Replaces times of file
-      to be synchronized with times of synchronization file, respectively.
+      Synchronize subtitle times one by one.
+      Optional switch, to be used with -y or -D.
+      Replaces times of file to be synchronized with times of synchronization file, respectively.
 
   ${bold}-f \"Find text\"${normal}
-      Search, case insensitive. The double quotes are necessary. Works with srt and sub.
+      Search, case insensitive.
+      The double quotes are necessary.
+      Works with srt and sub.
 
   ${bold}-F \"Find text\"${normal}
-      Search, case sensitive. The double quotes are necessary. Works with srt and sub.
+      Search, case sensitive.
+      The double quotes are necessary.
+      Works with srt and sub.
 
   ${bold}-e \"Text to be replaced\" \"New text\"${normal}
-      Replace, case insensitive. The double quotes are necessary. Works with srt and sub.
+      Replace, case insensitive.
+      The double quotes are necessary.
+      Works with srt and sub.
 
   ${bold}-E \"Text to be replaced\" \"New text\"${normal}
-      Replace, case sensitive. The double quotes are necessary. Works with srt and sub.
+      Replace, case sensitive.
+      The double quotes are necessary.
+      Works with srt and sub.
 
   ${bold}-t film${normal} or ${bold}ntsc${normal} or ${bold}pal${normal} or ${bold}custom fps${normal}
-      Convert sub to srt. Pal = 25, film = 23.976, ntsc = 29.970. Custom fps can be integer or float number.
+      Convert sub to srt.
+      Pal = 25, film = 23.976, ntsc = 29.970. Custom fps can be integer or float number.
       Works only with sub subtitle files.
 
   ${bold}-u film${normal} or ${bold}ntsc${normal} or ${bold}pal${normal} or ${bold}custom fps${normal}
-      Convert srt to sub. Pal = 25, film = 23.976, ntsc = 29.970. Custom fps can be integer or float number.
-      Any srt tags that cannot be converted to sub tags will pass to the .sub file. For example, a tag that
-      includes one word in a sentence.
+      Convert srt to sub.
+      Pal = 25, film = 23.976, ntsc = 29.970. Custom fps can be integer or float number.
+      Any srt tags that cannot be converted to sub tags will be passed unchanged to the .sub file.
+      For example, a tag that includes just one word in a sentence.
 
   ${bold}-U film${normal} or ${bold}ntsc${normal} or ${bold}pal${normal} or ${bold}custom fps${normal}
-      Convert srt to sub. Pal = 25, film = 23.976, ntsc = 29.970. Custom fps can be integer or float number.
-      Same as the -u parameter above, but also ignores any srt tags that were not converted to respective
-      sub tags. This is the behavior that you'd expect from other subtitle edit programs.
+      Convert srt to sub.
+      Pal = 25, film = 23.976, ntsc = 29.970. Custom fps can be integer or float number.
+      Same as the -u parameter above, but any srt tags that were not converted to respective sub tags are ignored.
+      This is the behavior that you'd expect from other subtitle edit programs.
 
   ${bold}-j \"Input file\"${normal}
-      Join two srt subtitles. This srt will be appended to the srt given with -i parameter.
+      Join two srt subtitles.
+      Supports relative or absolute paths.
+      This srt will be appended to the srt given with -i parameter.
 
   ${bold}-J hh:mm:ss,fff${normal}
-      Join time. Optional parameter, to be used with -j. Shifts the time after beginning of the second srt
-      in the output file.
+      Join time.
+      Optional parameter, to be used with -j.
+      Shifts the time after beginning of the second srt in the output file.
 
   ${bold}-x (+/-)hh:mm:ss,fff${normal} or ${bold}(+/-)SUB_INTEGER${normal} or ${bold}(+/-)INTEGER:INTEGERt${normal} or ${bold}(+/-)INTEGER:INTEGERn${normal}
-      Split srt subtitle. Can take 4 different syntaxes:
-        i)   (+/-)hh:mm:ss,fff:     splitting time.
-        ii)  (+/-)SUB_INTEGER:      splitting subtitle integer.
-        iii) (+/-)INTEGER:INTEGERt: fraction where we split the subtitle file according to total time.
-        iv)  (+/-)INTEGER:INTEGERn: fraction where we split the subtitle file according to number of subtitles.
+      Split srt subtitle.
+      Can take 4 different syntaxes:
+        1. (+/-)hh:mm:ss,fff:     splitting time.
+        2. (+/-)SUB_INTEGER:      splitting subtitle integer.
+        3. (+/-)INTEGER:INTEGERt: fraction where we split the subtitle file according to total time.
+        4. (+/-)INTEGER:INTEGERn: fraction where we split the subtitle file according to number of subtitles.
       The minus sign means that counting begins from the end of the subtitle file.
       The plus sign means that counting begins from the beginning. (Equivalent of using no sign at all).
 
   ${bold}-X [Switch]${normal}
-      Split time. Optional switch, to be used with -x. Makes the second generated srt begin with time 00:00:00,000.
+      Split time.
+      Optional switch, to be used with -x.
+      Makes the second generated srt begin with time 00:00:00,000.
       Can be used with any -x syntax.
 
   ${bold}-c [Switch]${normal}
-      Clean trash. Replace multiple whitespaces with one, clean beginning and trailing spaces, replace two single
-      quotes with a double quote, replace 2 or more \".\" with \"...\", capitalize the first letter after '.', '!'
-      and '?' and many more common errors usually found in subtitles.
-      Removes subtitles with zero duration.
+      Clean trash.
+      Fixes many errors usually found in subtitles:
+      • Replace multiple whitespaces with one
+      • clean beginning and trailing spaces
+      • replace two single quotes with a double quote
+      • replace 2 or more \".\" with \"...\"
+      • capitalize the first letter after '.', '!' and '?'
+      • remove subtitles with zero duration
+      • and many more.
       Also removes subtitles that contain the key words or key phrases (case insensitive) in /etc/subeditrc.
       /etc/subeditrc is a text file that you can edit and add key words or key phrases.
       If ~/.subeditrc exists (you have to create it manually), then it will be used instead of /etc/subeditrc.
@@ -191,20 +234,27 @@ ${cyan}PARAMETERS${normal}
   ${bold}-k '([{?mM'${normal}
       Delete text for hearing impaired.
       The ([{? characters are the symbols that the text for the hearing impaired is enclosed by.
-      \"m\" and \"M\" are for music symbols. With \"m\" only the music symbols are deleted. With \"M\" the text that
-      is enclosed by the music symbols is deleted too.
+      \"m\" and \"M\" represent the music symbols ¶♪♫.
+      With \"m\" only the music symbols are deleted.
+      With \"M\" the text that is enclosed by the music symbols is deleted too.
       Use only the symbol(s) that are needed for each subtitle file.
       The single quotes are necessary.
       Works with srt and sub.
 
   ${bold}-m [Switch]${normal}
       Fix common errors.
-      Fix common OCR mistakes like zero and capital 'o' ripping mistakes, replace \"I\" with \"l\" in the middle of
-      a lowercase word, replace a single \"l\" with \"I\", replace \"l'm\" with \"I'm\" etc. It's similar to 'Clean
-      trash' but it fixes different errors.
-      Also fixes: Invalid times (duration < 0), too long durations (max of 7 seconds or 0.15 seconds per character),
-      overlapping display times, too short durations (0.06 seconds per character), subtitles over two lines and
-      too long lines.
+      Similar to Clean trash, but fixes different OCR mistakes:
+      • Zero and capital 'o' ripping mistakes
+      • replace \"I\" with \"l\" in the middle of a lowercase word
+      • replace a single \"l\" with \"I\"
+      • replace \"l'm\" with \"I'm\" etc.
+      Also fixes errors in subtitle times:
+      • Invalid times (duration < 0)
+      • too long durations (max of 7 seconds or 0.15 seconds per character)
+      • overlapping display times
+      • too short durations (0.06 seconds per character)
+      • subtitles over two lines
+      • too long lines.
       Works with srt and sub.
 
   ${bold}-h [Switch]${normal}
@@ -216,21 +266,18 @@ ${cyan}PARAMETERS${normal}
 examplecounter=1
 
 text2="${cyan}NOTES${normal}
-  • If the argument is a subtitle file or a directory you can give a relative or absolute path or a name
-  in the working directory.
+  • -i (input file) or -d (input directory) is required in every case.
   • Filenames must be enclosed in quotes if they contain spaces or other special characters (including wildcards).
   • Do not use \"~\" or \"\$HOME\" to symbolize the home directory. Write the text instead (/home/yourname).
-  • -i (input file) or -d (input directory) is required in every case.
-  • If only -i parameter is used then the subtitle goes through a basic clean-up (empty subtitles are removed etc.)
-  • -1 and -2 parameters (adjust time) can be combined (equivalent of using just the -a parameter).
   • -f, -F (find), -e, -E (replace), -c (clean trash), -k (delete text for HI) and -m (fix common errors) parameters
   work with both srt and sub subtitle files.
-  • You can put different parameters in the same command and they'll run one after the other.
+  • You can use multiple parameters in the same command. They'll run one after the other in a predetermined order.
   • Bellow you'll find examples for every parameter.\n\n\n"
 
 
 text2+="${cyan}EXAMPLES${normal}
   ${bold}Basic clean-up (purify)${normal}
+  ${bold}Wildcard usage${normal}
 
   ${bold}${green}Example $((exmpl=examplecounter++))${normal}
   subedit -i foo.srt
@@ -297,21 +344,23 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
 text2+="  ${bold}Convert NTSC to PAL${normal}
 
   ${bold}${green}Example $((examplecounter++))${normal}
-  subedit -i foo.srt -p\n\n"
+  subedit -i foo.srt -p
+  Converts the fps of foo.srt from NTSC to PAL.\n\n"
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -i \"*.srt\" -p
-  Converts the fps in all .srt subtitle files.\n\n\n"
+  Converts the fps of all .srt subtitle files from NTSC to PAL.\n\n\n"
 
 
 text2+="  ${bold}Convert PAL to NTSC${normal}
 
   ${bold}${green}Example $((examplecounter++))${normal}
-  subedit -i foo.srt -n\n\n"
+  subedit -i foo.srt -n
+  Converts the fps of foo.srt from PAL to NTSC.\n\n"
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -d foo_directory -n
-  Converts the fps in all .srt subtitle files in directory \"foo_directory\" from PAL to NTSC.\n\n"
+  Converts the fps of all .srt subtitle files in directory \"foo_directory\" from PAL to NTSC.\n\n"
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -d foo_directory -r -n
@@ -388,12 +437,12 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
 text2+="  ${bold}Replace text${normal}
 
   ${bold}${green}Example $((examplecounter++))${normal}
-  subedit -i foo.srt -e \"George Smlth\" \"George Smith\"
-  Replaces text \"george smlth\" (case insensitive) with \"George Smith\".\n\n"
+  subedit -i foo.srt -e \"Goerge\" \"George\"
+  Replaces text \"goerge\" (case insensitive) with \"George\".\n\n"
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
-  subedit -i foo.srt -E \"i'm\" \"I'm\"
-  Replaces text \"i'm\" (case sensitive) with \"I'm\".\n\n\n"
+  subedit -i foo.srt -E \"wthout\" \"without\"
+  Replaces text \"wthout\" (case sensitive) with \"without\".\n\n\n"
 
 
 text2+="  ${bold}Convert sub to srt${normal}
@@ -520,13 +569,13 @@ text2+="  ${bold}Clean trash${normal}
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -i \"*\" -c -b
-  Cleans all subtitle files and creates a backup for each one before processing them.
+  Cleans all subtitle files and creates a backup for each one before processing it.
   Files that are not subtitle files are not processed.\n\n"
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -d foo_directory -c -b
   Cleans all subtitle files in directory \"foo_directory\", and creates a backup for each one
-  before processing them.\n\n"
+  before processing it.\n\n"
 
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -d foo_directory -c -r -b
@@ -569,7 +618,23 @@ text2+="  ${bold}Fix common errors${normal}
 text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   subedit -d foo_directory -m -b
   Fixes common errors in all subtitle files in directory \"foo_directory\", and creates
-  a backup for each one before processing them.\n\n\n"
+  a backup for each one before processing it.\n\n\n"
+
+
+text2+="  ${bold}Multiple parameters in the same command${normal}
+
+  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -s 00:00:03,600 -k '['
+  Shifts time and deletes text for hearing impaired in foo.srt.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -p -c
+  Converts the fps from NTSC to PAL and cleans foo.srt.\n\n"
+
+text2+="  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -d foo_directory -c -k 'M' -m -b
+  Cleans, deletes text that's enclosed in the music symbols ¶♪♫ and fixes common errors in all subtitle
+  files in directory \"foo_directory\", and creates a backup for each one before processing it.\n\n\n"
 
 
 text2+="${cyan}ABOUT${normal}
