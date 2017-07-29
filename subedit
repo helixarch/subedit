@@ -959,8 +959,15 @@ read_sub ()
 				line="${BASH_REMATCH[1]}${BASH_REMATCH[12]}${BASH_REMATCH[22]}${BASH_REMATCH[32]}{Y:$tag_values}${BASH_REMATCH[6]}${BASH_REMATCH[16]}${BASH_REMATCH[26]}${BASH_REMATCH[36]}${BASH_REMATCH[42]}"
 			fi
 
+			# Remove the \r in the line ending to workaround read's inconsistency between Cygwin and Linux
+			if [[ $line =~ ^(.+)$cr$ ]]; then
+				line=${BASH_REMATCH[1]}
+			fi
+
+			# Split the line in the '|' character and store it to an array
 			IFS=$'|'
 			read -r -a split_line <<< "$line"
+
 			# Merge multiple y tags in the first line
 			if [[ ${split_line[0]} =~ $regex_merge_y_tags1 ]] && [[ ${BASH_REMATCH[11]} ]]; then
 				ibus_matches=${BASH_REMATCH[12]}${BASH_REMATCH[18]}${BASH_REMATCH[24]}${BASH_REMATCH[30]}
