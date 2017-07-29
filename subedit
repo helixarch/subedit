@@ -4233,8 +4233,14 @@ delete_HI ()
 		# We must unset this so that read_srt fixes the line endings
 		unset subtitleis
 
+		# read_srt needs the new encoding
+		encoding_old=$encoding
+		encoding="utf-8"
+
 		# read_srt removes any empty subtitles
 		read_srt "$inputfilename"
+
+		encoding=$encoding_old
 
 		# We must set this again, or the basic_clean_up will run after this
 		subtitleis="srt"
@@ -4300,15 +4306,21 @@ delete_HI ()
 		fi
 
 		# Export what we have so far to inputfilename
-		printf "%s\n" "$tempvar" | iconv -f utf-8 -t $encoding > "$inputfilename"
+		printf "%s\n" "$tempvar" > "$inputfilename"
 
 		unset tempvar
 
 		# We must unset this so that read_sub fixes the line endings
 		unset subtitleis
 
+		# read_sub needs the new encoding
+		encoding_old=$encoding
+		encoding="utf-8"
+
 		# read_sub removes any empty subtitles
 		read_sub "$inputfilename"
+
+		encoding=$encoding_old
 
 		# We must set this again, or the basic_clean_up will run after this
 		subtitleis="sub"
