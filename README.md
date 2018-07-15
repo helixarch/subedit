@@ -31,12 +31,12 @@ The script generally works with srt (SubRip), but a few parameters work with sub
 - - - - -
 
 ### SCREENSHOTS
-![Help examples](https://s2.postimg.org/z869lt1c9/subedit_help_examples.png)  
+![Help examples](https://s2.postimg.cc/z869lt1c9/subedit_help_examples.png)  
 Help examples
 
 <br>
 
-![Wildcard support](https://s2.postimg.org/6nkee6i09/subedit_wildcard.png)  
+![Wildcard support](https://s2.postimg.cc/6nkee6i09/subedit_wildcard.png)  
 Wildcard support
 - - - - -
 
