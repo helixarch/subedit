@@ -20,6 +20,7 @@ The script generally works with srt (SubRip), but a few parameters work with sub
 >- Clean subtitles
 >- Delete text for hearing impaired
 >- Fix subtitles
+>- Sort subtitles
 
 >     Also:
 >- Supports wildcards
@@ -68,6 +69,7 @@ Wildcard support
     -c    Clean trash.  
     -k    Delete text for hearing impaired.  
     -m    Fix common errors.
+	-o    Sort subtitles by start time.
     -h    Help.  
     -H    Help with more information and examples.
 - - - - -
@@ -302,11 +304,17 @@ Works with srt and sub.
 >- Invalid times (duration < 0)
 >- too long durations (max of 7 seconds or 0.15 seconds per character)
 >- overlapping display times
->- too short durations (0.06 seconds per character)
+>- too short durations (0.06 seconds per character or less)
 >- subtitles over two lines
 >- too long lines.
 
 >Works with srt and sub.
+
+<br>
+
+`-o [Switch]`
+>Sort subtitles by start time.  
+Works with srt and sub.
 
 <br>
 
