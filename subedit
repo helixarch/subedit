@@ -257,6 +257,10 @@ ${cyan}PARAMETERS${normal}
       • too long lines.
       Works with srt and sub.
 
+  ${bold}-o [Switch]${normal}
+      Sort subtitles by start time/frames.
+      Works with srt and sub.
+
   ${bold}-h [Switch]${normal}
       Display help.
 
@@ -621,6 +625,13 @@ text2+="  ${bold}${green}Example $((examplecounter++))${normal}
   a backup for each one before processing it.\n\n\n"
 
 
+text2+="  ${bold}Sort subtitles${normal}
+
+  ${bold}${green}Example $((examplecounter++))${normal}
+  subedit -i foo.srt -o
+  Sorts subtitles by start time.\n\n\n"
+
+
 text2+="  ${bold}Multiple parameters in the same command${normal}
 
   ${bold}${green}Example $((examplecounter++))${normal}
@@ -652,12 +663,12 @@ exit 0
 
 
 # If no parameter is given then exit
-if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:mhH" opt); then
+if ( ! getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:mohH" opt); then
 	echo "Try 'subedit -h' for more information."; exit 1;
 fi
 
 # Processing parameters
-while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:mhH" parameter; do
+while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:mohH" parameter; do
 	case "$parameter" in
 		i) inputfilename=$OPTARG ;;
 		d) inputdirectory=$OPTARG ;;
@@ -692,6 +703,7 @@ while getopts ":i:d:rbs:pna:1:2:y:D:Yf:F:e:E:t:u:U:j:J:x:Xck:mhH" parameter; do
 		c) cleantrash="True" ;;
 		k) deletetextsforHI=$OPTARG ;;
 		m) fixerrors="True" ;;
+		o) sortsubs="True" ;;
 		h) get_help ;;
 		H) longhelp="True"; get_help ;;
 		?) echo -e "${red}Error: Parameter -$OPTARG is unknown or an argument is missing.${normal}\nTry 'subedit -h' for more information."; exit 1 ;;
@@ -4404,6 +4416,7 @@ delete_HI ()
 	IFS=$old_IFS		# restore default field separator
 }
 
+
 fix_common_errors ()
 {
 	# Check if the input file is a text
@@ -5601,6 +5614,173 @@ fix_common_errors ()
 }
 
 
+sort_subs ()
+{
+	# Check if the input file is a text
+	check_file "$inputfilename"
+
+	# Exit this function if the return code of check_file is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
+	# Check if the srt or sub is OK
+	check_srt_and_sub "$inputfilename" "Sorting subtitles in \"$inputfilename\" by start time."
+
+	# Exit this function if the return code of check_srt_and_sub is not 0
+	if (($? != 0)); then
+		return 1
+	fi
+
+
+	IFS=$'\n'			# new field separator, the end of line
+
+	if [[ $subtitleis == "srt" ]]; then
+		# Read text file to arraysrt
+		read_srt "$inputfilename"
+
+		# The encoding must be UTF-8
+		IFS=$'\n'
+		temparraysrt=( $(printf "%s\n" "${arraysrt[@]}" | iconv -f $encoding -t utf-8) )
+		unset arraysrt
+		arraysrt+=("${temparraysrt[@]}")
+		unset temparraysrt
+
+		# Remove non necessary lines and create newarraysrt
+		newarraysrt=()
+		for ((i=0; i<=${#arraysrt[@]}; i++)); do
+			if [[ ${arraysrt[$(($i + 1))]} =~ $regextime ]] || [[ ${arraysrt[$(($i + 2))]} =~ $regextime ]]; then
+				:
+			else
+				newarraysrt+=(${arraysrt[$i]})
+			fi
+		done
+
+
+		# Process the newarraysrt and at the same time create the arrayfakesub
+		IFS=$'\r'
+		elementsub=()
+		stringsub=()
+		timefakesub=""
+		arrayfakesub=()
+		for ((i=0; i<${#newarraysrt[@]}; i++)); do
+			line=${newarraysrt[$i]}
+
+			if [[ $line =~ $regextime ]]; then
+				# Remove empty lines at the end
+				while :; do
+					if (( ${#elementsub[@]} > 0 )) && (( ${#elementsub[-1]} == 1 )); then
+						unset elementsub[-1]
+					else
+						break
+					fi
+				done
+
+				for k in "${elementsub[@]}"; do
+					stringsub=${stringsub:+$stringsub}$k
+				done
+				arrayfakesub+=($timefakesub$stringsub)
+
+				unset elementsub
+				stringsub=""
+				h1="${BASH_REMATCH[1]}"
+				m1="${BASH_REMATCH[2]}"
+				s1="${BASH_REMATCH[3]}"
+				f1="${BASH_REMATCH[4]}"
+
+				h2="${BASH_REMATCH[5]}"
+				m2="${BASH_REMATCH[6]}"
+				s2="${BASH_REMATCH[7]}"
+				f2="${BASH_REMATCH[8]}"
+
+				starttime="$h1:$m1:$s1,$f1"
+				endtime="$h2:$m2:$s2,$f2"
+
+				timefakesub="{$starttime}{$endtime}"
+
+			elif [[ $elementsub ]]; then
+				elementsub+=(\|$line)
+			else
+				elementsub+=($line)
+			fi
+		done
+
+		# Remove empty lines at the end
+		while :; do
+			if (( ${#elementsub[@]} > 0 )) && (( ${#elementsub[-1]} == 1 )); then
+				unset elementsub[-1]
+			else
+				break
+			fi
+		done
+
+		for k in "${elementsub[@]}"; do
+			stringsub=${stringsub:+$stringsub}$k
+		done
+		arrayfakesub+=($timefakesub$stringsub)
+
+
+		# Sort the array elements by the start time
+		readarray -t arrayfakesub < <(printf '%s\0' "${arrayfakesub[@]}" | sort -V -z | xargs -0n1)
+
+
+		# Process the arrayfakesub and at the same time create the arraysrt
+		unset arraysrt
+		arraysrt=()
+
+		regexfakesub="^\{([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])\}\{([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])\}(.+)$"
+
+		linecounter=0
+		IFS=$'|'			# new field separator, the new line character in sub file
+
+		for ((i=0; i<=${#arrayfakesub[@]}-1; i++)); do
+			line=${arrayfakesub[$i]}
+
+			if [[ $line =~ $regexfakesub ]]; then
+				h1="${BASH_REMATCH[1]}"
+				m1="${BASH_REMATCH[2]}"
+				s1="${BASH_REMATCH[3]}"
+				f1="${BASH_REMATCH[4]}"
+
+				h2="${BASH_REMATCH[5]}"
+				m2="${BASH_REMATCH[6]}"
+				s2="${BASH_REMATCH[7]}"
+				f2="${BASH_REMATCH[8]}"
+
+				starttime="$h1:$m1:$s1,$f1"
+				endtime="$h2:$m2:$s2,$f2"
+				subs="${BASH_REMATCH[9]}"
+
+				read -r -a arraysubs <<< "$subs"
+
+				((linecounter++))
+				arraysrt+=("$linecounter")
+				arraysrt+=("$starttime --> $endtime")
+				arraysrt+=("${arraysubs[@]}")
+				arraysrt+=("")
+			elif [[ $line == "" ]] || (( ${#line} == 1 )); then
+				:
+			else
+				echo "Warning: There's something wrong with line $(($i+1)) in the sub file"
+			fi
+		done
+
+
+		# Export to inputfilename
+		printf "%s\n" "${arraysrt[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+	elif [[ $subtitleis == "sub" ]]; then
+		# Read text file to arraysub
+		read_sub "$inputfilename"
+
+		# Sort the array elements by the start time
+		readarray -t arraysub < <(printf '%s\0' "${arraysub[@]}" | sort -V -z | xargs -0n1)
+
+		# Export to inputfilename
+		printf "%s\n" "${arraysub[@]}" | iconv -f utf-8 -t $encoding > "$inputfilename"
+	fi
+}
+
+
 # Check for incompatible parameters
 if [[ $inputfilename ]] && [[ $inputdirectory ]]; then
 	echo "${red}Error: The parameters -i (Input file) and -d (Input directory) cannot be used together.${normal}"; exit 1
@@ -5667,6 +5847,10 @@ master_function ()
 
 	if [[ $fixerrors ]]; then
 		fix_common_errors; (($? != 0)) && return 1
+	fi
+
+	if [[ $sortsubs ]]; then
+		sort_subs; (($? != 0)) && return 1
 	fi
 
 	if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
@@ -5841,6 +6025,10 @@ if [[ $inputdirectory ]]; then
 
 		if [[ $fixerrors ]]; then
 			fix_common_errors
+		fi
+
+		if [[ $sortsubs ]]; then
+			sort_subs
 		fi
 
 		if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
