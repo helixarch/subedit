@@ -5795,66 +5795,87 @@ fi
 # Input file with wildcard support
 master_function ()
 {
+	executed_something=false
 	if [[ $shifttime ]]; then
+		executed_something=true
 		shift_time; (($? != 0)) && return 1
 	fi
 
 	if [[ $pal2ntsc ]] || [[ $ntsc2pal ]]; then
+		executed_something=true
 		change_fps; (($? != 0)) && return 1
 	fi
 
 	if [[ $adjustfirst ]]; then
+		executed_something=true
 		adjust_time; (($? != 0)) && return 1
 	fi
 
 	if [[ $adjustonlyfirst ]] || [[ $adjustonlylast ]]; then
+		executed_something=true
 		adjust_time_v2; (($? != 0)) && return 1
 	fi
 
 	if [[ $synchronizefile ]]; then
+		executed_something=true
 		synchronize_with_file; (($? != 0)) && return 1
 	fi
 
 	if [[ $findci ]] || [[ $findcs ]]; then
+		executed_something=true
 		find_text; (($? != 0)) && return 1
 	fi
 
 	if [[ $replace1 ]] || [[ $replace3 ]]; then
+		executed_something=true
 		replace_text; (($? != 0)) && return 1
 	fi
 
 	if [[ $sub2srt ]]; then
+		executed_something=true
 		sub2_srt; (($? != 0)) && return 1
 	elif [[ $srt2sub ]]; then
+		executed_something=true
 		srt2_sub; (($? != 0)) && return 1
 	fi
 
 	if [[ $joinsrt ]]; then
+		executed_something=true
 		join_srt; (($? != 0)) && return 1
 	fi
 
 	if [[ $splitsrt ]]; then
+		executed_something=true
 		split_srt; (($? != 0)) && return 1
 	fi
 
 	if [[ $cleantrash ]]; then
+		executed_something=true
 		clean_trash; (($? != 0)) && return 1
 	fi
 
 	if [[ $deletetextsforHI ]]; then
+		executed_something=true
 		delete_HI; (($? != 0)) && return 1
 	fi
 
 	if [[ $fixerrors ]]; then
+		executed_something=true
 		fix_common_errors; (($? != 0)) && return 1
 	fi
 
 	if [[ $sortsubs ]]; then
+		executed_something=true
 		sort_subs; (($? != 0)) && return 1
 	fi
 
 	if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
+		executed_something=true
 		basic_clean_up; (($? != 0)) && return 1
+	fi
+
+	if ! executed_something; then
+		return 0
 	fi
 }
 
