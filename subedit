@@ -5856,6 +5856,8 @@ master_function ()
 	if ! [[ $srtok ]] && ! [[ $subok ]] && ! [[ $subtitleis ]]; then
 		basic_clean_up; (($? != 0)) && return 1
 	fi
+
+	return 0
 }
 
 if [[ $inputfilename ]]; then
