@@ -5874,7 +5874,7 @@ master_function ()
 		basic_clean_up; (($? != 0)) && return 1
 	fi
 
-	if ! executed_something; then
+	if [ ! executed_something ]; then
 		return 0
 	fi
 }
