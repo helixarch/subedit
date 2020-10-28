@@ -51,7 +51,7 @@ nl=$(echo -e "\n")
 
 # Define regular expressions
 regexinteger="^([0-9]+)$cr$"
-regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])$cr$"
+regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])[[:blank:]]*$cr$"
 regexsub="^\{([0-9]+)\}\{([0-9]+)\}(.+)$cr$"
 regexsub1="^\{[1]\}\{[1]\}(.+)$cr$"
 regexemptyline="^($cr$nl|$nl|$cr)$"
@@ -807,7 +807,7 @@ read_srt ()
 	regexemptyorblank="^[[:blank:]]*$cr$"
 	for ((i=0; i<=${#temp1arraysrt[@]}; i++)); do
 		temp2arraysrt+=(${temp1arraysrt[$i]})
-		if [[ ${temp1arraysrt[((i+1))]} =~ $regextime ]]; then 
+		if [[ ${temp1arraysrt[((i+1))]} =~ $regextime ]]; then
 			if [[ ${temp1arraysrt[$i]} =~ $regexemptyorblank ]]; then
 				while :; do
 					if [[ ${temp2arraysrt[-1]} =~ $regexemptyorblank ]]; then
@@ -903,7 +903,7 @@ read_srt ()
 	temp5arraysrt=()
 	for ((i=0; i<=${#temp4arraysrt[@]}; i++)); do
 		temp5arraysrt+=(${temp4arraysrt[$i]})
-		if (( ${#temp5arraysrt[@]} > 1)) && [[ ${temp5arraysrt[-2]} =~ $regextime ]]; then 
+		if (( ${#temp5arraysrt[@]} > 1)) && [[ ${temp5arraysrt[-2]} =~ $regextime ]]; then
 			if [[ ${temp5arraysrt[-1]} =~ $regexemptyorblank ]]; then
 				unset temp5arraysrt[-1]
 			fi
@@ -974,12 +974,28 @@ read_srt ()
 
 	IFS=$old_IFS		# restore default field separator
 
-	# Re-create the subtitle array with new counter
+	# Re-create the subtitle array with new counter and remove any trailing whitespaces from the subtitles' time string
 	subcounter=0
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		if [[ ${arraysrt[$i]} =~ $regexinteger ]] && [[ ${arraysrt[((i+1))]} =~ $regextime ]]; then
+			# Re-create the counter
 			((subcounter++))
 			arraysrt[$i]="$subcounter$cr"
+
+			# Remove trailing whitespaces from the time strings
+			h1="${BASH_REMATCH[1]}"
+			m1="${BASH_REMATCH[2]}"
+			s1="${BASH_REMATCH[3]}"
+			f1="${BASH_REMATCH[4]}"
+
+			h2="${BASH_REMATCH[5]}"
+			m2="${BASH_REMATCH[6]}"
+			s2="${BASH_REMATCH[7]}"
+			f2="${BASH_REMATCH[8]}"
+
+			line_new="$h1:$m1:$s1,$f1 --> $h2:$m2:$s2,$f2"
+
+			arraysrt[$((i+1))]=$line_new$cr
 		fi
 	done
 
