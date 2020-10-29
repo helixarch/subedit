@@ -50,8 +50,8 @@ cr=$(echo -e "\r")
 nl=$(echo -e "\n")
 
 # Define regular expressions
-regexinteger="^([0-9]+)$cr$"
-regextime="^([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])[[:blank:]]*$cr$"
+regexinteger="^[[:blank:]]*([0-9]+)[[:blank:]]*$cr$"
+regextime="^[[:blank:]]*([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9]) --> ([0-9][0-9]):([0-9][0-9]):([0-9][0-9]),([0-9][0-9][0-9])[[:blank:]]*$cr$"
 regexsub="^\{([0-9]+)\}\{([0-9]+)\}(.+)$cr$"
 regexsub1="^\{[1]\}\{[1]\}(.+)$cr$"
 regexemptyline="^($cr$nl|$nl|$cr)$"
@@ -974,7 +974,7 @@ read_srt ()
 
 	IFS=$old_IFS		# restore default field separator
 
-	# Re-create the subtitle array with new counter and remove any trailing whitespaces from the subtitles' time string
+	# Re-create the subtitle array with new counter and remove any leading or trailing whitespaces from the subtitles' time string
 	subcounter=0
 	for ((i=0; i<=${#arraysrt[@]}; i++)); do
 		if [[ ${arraysrt[$i]} =~ $regexinteger ]] && [[ ${arraysrt[((i+1))]} =~ $regextime ]]; then
