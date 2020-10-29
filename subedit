@@ -1016,6 +1016,9 @@ read_sub ()
 		unix2dos -q "$1" 2> /dev/null
 	fi
 
+	# Remove all leading whitespace
+	sed -b s'/^[[:blank:]]*//'g -i "$1"
+
 	# Remove any empty subtitle lines before the first non-empty dialog line
 	sed -b s'/^\({[0-9]\+}{[0-9]\+}\)\(\({[CSFPY]:[^}]*}\)*\)\([|[:blank:]]*[|]*\({[csfy]:[^}]*}\)*[|[:blank:]]*[|]\)*\(.*\)/\1\2\6/'g -i "$1"
 
@@ -1036,7 +1039,11 @@ read_sub ()
 		if [[ $line =~ $regexsub1 ]]; then
 			arraysub+=($line)
 		fi
-		break
+		if [[ $line =~ $regexemptyline ]]; then
+			continue
+		else
+			break
+		fi
 	done
 
 	for line in $(iconv -f $encoding -t utf-8 "$1" 2> /dev/null); do
