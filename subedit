@@ -67,7 +67,7 @@ esac
 
 text1="
 ${cyan}NAME${normal}
-  subedit
+  subedit v1.2.2
 
 
 ${cyan}DESCRIPTION${normal}
